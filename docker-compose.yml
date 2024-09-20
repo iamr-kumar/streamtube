@@ -1,0 +1,59 @@
+services:
+  streamer-1:
+    build:
+      context: .
+      dockerfile: ./src/streamer/Dockerfile
+    volumes:
+      - ./src/streamer/:/home/streamer
+    container_name: streamer-1
+    ports:
+      - 3001:3001
+    environment:
+      - PORT=3001
+
+  streamer-2:
+    build:
+      context: .
+      dockerfile: ./src/streamer/Dockerfile
+    volumes:
+      - ./src/streamer/:/home/streamer
+    container_name: streamer-2
+    ports:
+      - 3002:3002
+    environment:
+      - PORT=3002
+
+  streamer-3:
+    build:
+      context: .
+      dockerfile: ./src/streamer/Dockerfile
+    volumes:
+      - ./src/streamer/:/home/streamer
+    container_name: streamer-3
+    ports:
+      - 3003:3003
+    environment:
+      - PORT=3003
+
+  streamer-app:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./:/home/streamer-app
+    container_name: streamer-app
+    ports:
+      - 3000:3000
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx-load-balancer
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+
+    depends_on:
+      - streamer-1
+      - streamer-2
+      - streamer-3
