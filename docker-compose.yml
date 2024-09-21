@@ -2,9 +2,9 @@ services:
   streamer-1:
     build:
       context: .
-      dockerfile: ./streamer/Dockerfile
+      dockerfile: ./src/streamer/Dockerfile
     volumes:
-      - ./streamer/:/home/streamer
+      - ./src/streamer/:/home/streamer
     container_name: streamer-1
     ports:
       - 3001:3001
@@ -14,9 +14,9 @@ services:
   streamer-2:
     build:
       context: .
-      dockerfile: ./streamer/Dockerfile
+      dockerfile: ./src/streamer/Dockerfile
     volumes:
-      - ./streamer/:/home/streamer
+      - ./src/streamer/:/home/streamer
     container_name: streamer-2
     ports:
       - 3002:3002
@@ -26,9 +26,9 @@ services:
   streamer-3:
     build:
       context: .
-      dockerfile: ./streamer/Dockerfile
+      dockerfile: ./src/streamer/Dockerfile
     volumes:
-      - ./streamer/:/home/streamer
+      - ./src/streamer/:/home/streamer
     container_name: streamer-3
     ports:
       - 3003:3003
