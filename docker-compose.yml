@@ -26,9 +26,9 @@ services:
   streamer-3:
     build:
       context: .
-      dockerfile: ./streamer/Dockerfile
+      dockerfile: ./src/streamer/Dockerfile
     volumes:
-      - ./streamer/:/home/streamer
+      - ./src/streamer/:/home/streamer
     container_name: streamer-3
     ports:
       - 3003:3003
