@@ -7,8 +7,8 @@
 .yarn/install-state.gz
 
 # streamer backend
-/src/streamer/node_modules
-/src/streamer/.env*
+streamer/node_modules
+streamer/.env*
 
 # testing
 /coverage
