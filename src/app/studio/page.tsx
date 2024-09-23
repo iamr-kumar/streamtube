@@ -24,6 +24,7 @@ export default function Studio() {
   return (
     <div className="p-12">
       <video ref={videoRef} autoPlay></video>
+      <button className="mt-4 p-2 bg-blue-500 text-white rounded">Start</button>
     </div>
   );
 }
