@@ -1,8 +1,13 @@
 "use client";
-import React, { useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useRef } from "react";
+import io from "socket.io-client";
 
 export default function Studio() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const searchParams = useSearchParams();
+  const rtmpUrl = searchParams.get("rtmpUrl");
+  console.log(rtmpUrl);
 
   useEffect(() => {
     async function getVideo() {
@@ -19,6 +24,22 @@ export default function Studio() {
     }
 
     getVideo();
+
+    const socketIo = io("http://localhost:3001");
+
+    // Set up socket event listeners
+    socketIo.on("connect", () => {
+      console.log("Connected to WebSocket");
+    });
+
+    socketIo.on("disconnect", () => {
+      console.log("Disconnected from WebSocket");
+    });
+
+    // Clean up connection on component unmount
+    return () => {
+      socketIo.disconnect();
+    };
   }, []);
 
   return (

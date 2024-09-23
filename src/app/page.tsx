@@ -1,31 +1,20 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function Home() {
   const [url, setUrl] = useState("");
+
+  const router = useRouter();
   const handleUrlUpdate = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    try {
-      const res = await fetch("/api/stage", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url }),
-      });
-      if (res.ok) {
-        console.log("Stream started");
-      } else {
-        console.error("Failed to start stream");
-      }
-    } catch (err) {
-      console.error("Failed to start stream: ", err);
-    }
+    if (!url) return;
+    router.push(`/studio?rtmpUrl=${url}`);
   };
 
   return (
