@@ -1,24 +1,24 @@
 "use client";
 
-// import { useSession, signIn } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Video, Youtube, Zap, Shield } from "lucide-react";
 import Link from "next/link";
 
 export default function HomePage() {
-  // const { data: session, status } = useSession();
+  const { data: session, status } = useSession();
 
-  // if (status === "loading") {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-  //       <div className="animate-pulse">
-  //         <div className="h-8 w-32 bg-white/20 rounded mb-4"></div>
-  //         <div className="h-4 w-48 bg-white/10 rounded"></div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="animate-pulse">
+          <div className="h-8 w-32 bg-white/20 rounded mb-4"></div>
+          <div className="h-4 w-48 bg-white/10 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -43,10 +43,10 @@ export default function HomePage() {
               seamless RTMP streaming.
             </p>
 
-            {/* {!session ? ( */}
+            {!session ? (
             <div className="space-y-4">
               <Button
-                onClick={() => null}
+                onClick={() => signIn("google", { callbackUrl: "/studio" })}
                 size="lg"
                 className="bg-gradient-to-r from-red-500 to-purple-600 hover:from-red-600 hover:to-purple-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-red-500/25 transition-all duration-300"
               >
@@ -57,7 +57,7 @@ export default function HomePage() {
                 Connect your Google account to start streaming to YouTube
               </p>
             </div>
-            {/* ) : (
+            ) : (
               <div className="space-y-4">
                 <p className="text-gray-300 mb-4">
                   Welcome back,{" "}
@@ -73,7 +73,7 @@ export default function HomePage() {
                   </Button>
                 </Link>
               </div>
-            )} */}
+            )}
           </div>
         </div>
       </div>
