@@ -1,0 +1,21 @@
+{
+  "name": "streamtube",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@streamtube/web",
+    "dev:web": "npm run dev --workspace=@streamtube/web",
+    "dev:server": "npm run dev --workspace=@streamtube/server",
+    "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:server\"",
+    "build": "npm run build --workspace=@streamtube/web",
+    "build:all": "npm run build --workspaces",
+    "start": "npm run start --workspace=@streamtube/web",
+    "lint": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
