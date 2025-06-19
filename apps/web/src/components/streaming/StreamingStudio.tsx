@@ -43,7 +43,6 @@ export default function StreamingStudio() {
   });
 
   const wsRef = useRef<WebSocket | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     // Initialize WebSocket connection to backend
