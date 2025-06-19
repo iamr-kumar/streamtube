@@ -1,29 +1,28 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
-  Video,
-  VideoOff,
+  LogOut,
   Mic,
   MicOff,
   Monitor,
   MonitorOff,
   Play,
-  Square,
   Settings,
-  Youtube,
-  LogOut,
+  Square,
   User,
+  Video,
+  VideoOff,
+  Youtube,
 } from "lucide-react";
-import StreamCanvas from "./StreamCanvas";
+import { signOut } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import StreamCanvas from "./StreamCanvas";
 
 interface StreamSettings {
   title: string;
@@ -157,7 +156,7 @@ export default function StreamingStudio() {
         </div>
       </header>
 
-      <div className="max-w-9xl mx-auto p-6 grid lg:grid-cols-3 gap-6">
+      <div className="max-w-9xl mx-auto p-6 grid lg:grid-cols-3 gap-6 px-12 lg:px-48">
         {/* Main Canvas Area */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
@@ -297,7 +296,7 @@ export default function StreamingStudio() {
               <div className="space-y-4">
                 <Button
                   onClick={isStreaming ? stopStream : startStream}
-                  disabled={!streamSettings.title.trim()}
+                  // disabled={!streamSettings.title.trim()}
                   className={`w-full py-3 text-lg font-semibold rounded-xl transition-all duration-300 ${
                     isStreaming
                       ? "bg-red-600 hover:bg-red-700 text-white"

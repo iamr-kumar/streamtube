@@ -21,17 +21,10 @@ export default function StreamCanvas({
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string[]>([]);
-
-  // Debug helper
-  const addDebugInfo = (message: string) => {
-    setDebugInfo((prev) => [...prev.slice(-4), `${new Date().toLocaleTimeString()}: ${message}`]);
-  };
 
   // Initialize camera stream
   useEffect(() => {
     if (cameraEnabled) {
-      addDebugInfo("Requesting camera access...");
       navigator.mediaDevices
         .getUserMedia({
           video: {
@@ -41,28 +34,19 @@ export default function StreamCanvas({
           },
         })
         .then((stream) => {
-          addDebugInfo(`Camera stream initialized: ${stream.getVideoTracks().length} video tracks`);
           setCameraStream(stream);
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
             videoRef.current.play();
-            // Wait for video to load
-            videoRef.current.onloadedmetadata = () => {
-              addDebugInfo(
-                `Camera video loaded: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`
-              );
-            };
           }
         })
         .catch((err) => {
-          addDebugInfo(`Camera error: ${err.message}`);
           console.error("Error accessing camera:", err);
         });
     } else {
       if (cameraStream) {
         cameraStream.getTracks().forEach((track) => track.stop());
         setCameraStream(null);
-        addDebugInfo("Camera stream stopped");
       }
     }
   }, [cameraEnabled]);
@@ -70,7 +54,6 @@ export default function StreamCanvas({
   // Initialize screen share
   useEffect(() => {
     if (screenEnabled) {
-      addDebugInfo("Requesting screen share access...");
       navigator.mediaDevices
         .getDisplayMedia({
           video: {
@@ -81,28 +64,19 @@ export default function StreamCanvas({
           audio: true,
         })
         .then((stream) => {
-          addDebugInfo(`Screen stream initialized: ${stream.getVideoTracks().length} video tracks`);
           setScreenStream(stream);
           if (screenVideoRef.current) {
             screenVideoRef.current.srcObject = stream;
             screenVideoRef.current.play();
-            // Wait for video to load
-            screenVideoRef.current.onloadedmetadata = () => {
-              addDebugInfo(
-                `Screen video loaded: ${screenVideoRef.current?.videoWidth}x${screenVideoRef.current?.videoHeight}`
-              );
-            };
           }
         })
         .catch((err) => {
-          addDebugInfo(`Screen share error: ${err.message}`);
           console.error("Error accessing screen:", err);
         });
     } else {
       if (screenStream) {
         screenStream.getTracks().forEach((track) => track.stop());
         setScreenStream(null);
-        addDebugInfo("Screen stream stopped");
       }
     }
   }, [screenEnabled]);
@@ -110,22 +84,18 @@ export default function StreamCanvas({
   // Initialize microphone
   useEffect(() => {
     if (micEnabled) {
-      addDebugInfo("Requesting microphone access...");
       navigator.mediaDevices
         .getUserMedia({ audio: true })
         .then((stream) => {
-          addDebugInfo(`Mic stream initialized: ${stream.getAudioTracks().length} audio tracks`);
           setMicStream(stream);
         })
         .catch((err) => {
-          addDebugInfo(`Microphone error: ${err.message}`);
           console.error("Error accessing microphone:", err);
         });
     } else {
       if (micStream) {
         micStream.getTracks().forEach((track) => track.stop());
         setMicStream(null);
-        addDebugInfo("Microphone stream stopped");
       }
     }
   }, [micEnabled]);
@@ -306,9 +276,7 @@ export default function StreamCanvas({
         };
 
         recorder.start(100); // Send data every 100ms
-        addDebugInfo("MediaRecorder started");
       } catch (error) {
-        addDebugInfo(`MediaRecorder error: ${error.message}`);
         console.error("MediaRecorder setup error:", error);
       }
     };
@@ -364,16 +332,6 @@ export default function StreamCanvas({
               Mic Active
             </div>
           )}
-        </div>
-
-        {/* Debug info */}
-        <div className="bg-black/50 text-white text-xs p-2 rounded backdrop-blur-sm max-w-md">
-          <div className="font-semibold mb-1">Debug Info:</div>
-          {debugInfo.map((info, index) => (
-            <div key={index} className="truncate">
-              {info}
-            </div>
-          ))}
         </div>
       </div>
     </div>
