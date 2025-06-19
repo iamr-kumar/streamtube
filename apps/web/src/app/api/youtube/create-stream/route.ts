@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { google } from "googleapis";
-import { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
-
+// Define auth options inline to match the configuration in [...nextauth]/route.ts
 const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
@@ -14,8 +12,8 @@ const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
-      clientId: GOOGLE_CLIENT_ID,
-      clientSecret: GOOGLE_CLIENT_SECRET,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
           scope:
@@ -32,7 +30,8 @@ const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken as string;
+      // Use type assertion to add accessToken to session
+      (session as any).accessToken = token.accessToken;
       return session;
     },
   },
@@ -46,7 +45,7 @@ export async function POST(request: NextRequest) {
     // Get the session to access the user's access token
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.accessToken) {
+    if (!session || !(session as any).accessToken) {
       return NextResponse.json(
         { error: "Unauthorized - No valid session or access token" },
         { status: 401 }
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
     // Set up YouTube API client with the user's access token
     const oauth2Client = new google.auth.OAuth2();
     oauth2Client.setCredentials({
-      access_token: session.accessToken,
+      access_token: (session as any).accessToken,
     });
 
     const youtube = google.youtube({
