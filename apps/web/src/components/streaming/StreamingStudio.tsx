@@ -20,11 +20,12 @@ import {
   Youtube,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import StreamCanvas from "./StreamCanvas";
 import axios from "axios";
-import { PrivacyStatus, CreateBroadcastResponse } from "@/types/streaming";
+import { useStreaming } from "@/hooks/useStreaming";
+import { StreamConfig, PrivacyStatus, CreateBroadcastResponse } from "@/types/streaming";
 
 interface StreamSettings {
   title: string;
@@ -44,40 +45,39 @@ export default function StreamingStudio() {
     privacyStatus: PrivacyStatus.UNLISTED, // Default to unlisted
   });
 
-  const wsRef = useRef<WebSocket | null>(null);
+  // Use the streaming client hook
+  const {
+    status,
+    sessionId,
+    stats,
+    error,
+    connect,
+    disconnect,
+    configureStream,
+    startStream: startStreamClient,
+    stopStream: stopStreamClient,
+    sendStreamData,
+    clearError,
+  } = useStreaming();
 
+  // Initialize connection on component mount
   useEffect(() => {
-    // Initialize WebSocket connection to backend
-    const connectWebSocket = () => {
-      wsRef.current = new WebSocket("ws://localhost:8080");
-
-      wsRef.current.onopen = () => {
-        console.log("Connected to streaming server");
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        toast.error("Failed to connect to streaming server");
-      };
-
-      wsRef.current.onclose = () => {
-        console.log("Disconnected from streaming server");
-        // Attempt to reconnect after 3 seconds
-        setTimeout(connectWebSocket, 3000);
-      };
-    };
-
-    connectWebSocket();
+    connect().catch(console.error);
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      disconnect();
     };
-  }, []);
+  }, [connect, disconnect]);
+
+  // Show error toasts
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      clearError();
+    }
+  }, [error, clearError]);
 
   // Replace the current startStream function with this improved version
-
   const startStream = async () => {
     // Form validation
     if (!streamSettings.title.trim()) {
@@ -112,23 +112,44 @@ export default function StreamingStudio() {
       }
 
       console.log("Stream created:", broadcast, stream);
-      setIsStreaming(true);
 
-      // Show success message with YouTube URL
-      toast.success(
-        <div className="space-y-2">
-          <p>Stream started successfully!</p>
-          <a
-            href={broadcast.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs bg-white/10 px-2 py-1 rounded hover:bg-white/20 transition-colors block text-center"
-          >
-            Open YouTube Stream
-          </a>
-        </div>,
-        { duration: 6000 }
-      );
+      // Configure the streaming client with RTMP details
+      const streamConfig: StreamConfig = {
+        rtmpUrl: stream.rtmpUrl,
+        streamKey: stream.streamKey,
+        resolution: { width: 1920, height: 1080 },
+        frameRate: 30,
+        bitrate: 2500,
+        audioSampleRate: 44100,
+        audioChannels: 2,
+      };
+
+      // Configure and start stream
+      if (configureStream(streamConfig)) {
+        if (startStreamClient()) {
+          setIsStreaming(true);
+
+          // Show success message with YouTube URL
+          toast.success(
+            <div className="space-y-2">
+              <p>Stream started successfully!</p>
+              <a
+                href={broadcast.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs bg-white/10 px-2 py-1 rounded hover:bg-white/20 transition-colors block text-center"
+              >
+                Open YouTube Stream
+              </a>
+            </div>,
+            { duration: 6000 }
+          );
+        } else {
+          throw new Error("Failed to start streaming client");
+        }
+      } else {
+        throw new Error("Failed to configure streaming client");
+      }
     } catch (error) {
       toast.dismiss(); // Remove loading toast if present
 
@@ -169,16 +190,12 @@ export default function StreamingStudio() {
   };
 
   const stopStream = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "stop-stream",
-        })
-      );
+    if (stopStreamClient()) {
+      setIsStreaming(false);
+      toast.success("Stream stopped");
+    } else {
+      toast.error("Failed to stop stream");
     }
-
-    setIsStreaming(false);
-    toast.success("Stream stopped");
   };
 
   return (
@@ -195,6 +212,23 @@ export default function StreamingStudio() {
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Connection Status */}
+              <div className="flex items-center space-x-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    status === "connected" || status === "configured" || status === "streaming"
+                      ? "bg-green-500"
+                      : status === "error"
+                      ? "bg-red-500"
+                      : "bg-yellow-500"
+                  }`}
+                ></div>
+                <span className="text-xs text-gray-400 capitalize">{status}</span>
+                {sessionId && (
+                  <span className="text-xs text-gray-500">ID: {sessionId.slice(0, 8)}...</span>
+                )}
+              </div>
+
               <div className="flex items-center space-x-2 text-gray-300">
                 <User className="h-4 w-4" />
                 {/* <span className="text-sm">{session?.user?.name}</span> */}
@@ -235,9 +269,7 @@ export default function StreamingStudio() {
                 screenEnabled={screenEnabled}
                 micEnabled={micEnabled}
                 onStreamData={(data) => {
-                  if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                    wsRef.current.send(data);
-                  }
+                  sendStreamData(data);
                 }}
               />
             </CardContent>
