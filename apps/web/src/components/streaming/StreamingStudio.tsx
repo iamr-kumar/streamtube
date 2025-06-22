@@ -23,11 +23,13 @@ import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import StreamCanvas from "./StreamCanvas";
+import axios from "axios";
+import { PrivacyStatus, CreateBroadcastResponse } from "@/types/streaming";
 
 interface StreamSettings {
   title: string;
   description: string;
-  privacy: "public" | "unlisted" | "private";
+  privacyStatus: PrivacyStatus;
 }
 
 export default function StreamingStudio() {
@@ -39,7 +41,7 @@ export default function StreamingStudio() {
   const [streamSettings, setStreamSettings] = useState<StreamSettings>({
     title: "",
     description: "",
-    privacy: "unlisted",
+    privacyStatus: PrivacyStatus.UNLISTED, // Default to unlisted
   });
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -74,39 +76,95 @@ export default function StreamingStudio() {
     };
   }, []);
 
+  // Replace the current startStream function with this improved version
+
   const startStream = async () => {
+    // Form validation
+    if (!streamSettings.title.trim()) {
+      toast.error("Please enter a stream title");
+      return;
+    }
+
+    if (!streamSettings.description.trim()) {
+      toast.error("Please enter a stream description");
+      return;
+    }
+
     try {
+      // Show loading state
+      toast.loading("Creating your stream...");
+
       // Create YouTube live stream
-      const response = await fetch("/api/youtube/create-stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(streamSettings),
+      const response = await axios.post("/api/youtube/create-stream", {
+        title: streamSettings.title,
+        description: streamSettings.description,
+        privacyStatus: streamSettings.privacyStatus,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create YouTube stream");
+      const { success, broadcast, stream } = response.data as CreateBroadcastResponse;
+      console.log("API Response:", response.data);
+
+      // Remove loading toast
+      toast.dismiss();
+
+      if (!success) {
+        throw new Error("Failed to create stream");
       }
 
-      const { streamKey, rtmpUrl } = await response.json();
-
-      // Send stream configuration to backend
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "start-stream",
-            rtmpUrl,
-            streamKey,
-          })
-        );
-      }
-
+      console.log("Stream created:", broadcast, stream);
       setIsStreaming(true);
-      toast.success("Stream started successfully!");
+
+      // Show success message with YouTube URL
+      toast.success(
+        <div className="space-y-2">
+          <p>Stream started successfully!</p>
+          <a
+            href={broadcast.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs bg-white/10 px-2 py-1 rounded hover:bg-white/20 transition-colors block text-center"
+          >
+            Open YouTube Stream
+          </a>
+        </div>,
+        { duration: 6000 }
+      );
     } catch (error) {
+      toast.dismiss(); // Remove loading toast if present
+
+      // Type narrowing for Axios errors
+      if (axios.isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        const errorMessage = error.response?.data?.error || error.message;
+
+        // Handle different error status codes
+        if (statusCode === 401) {
+          toast.error("Authentication failed. Please sign in again.", {
+            action: {
+              label: "Sign In",
+              onClick: () => signOut({ callbackUrl: "/auth/signin" }),
+            },
+          });
+        } else if (statusCode === 403) {
+          toast.error(
+            "YouTube access denied. Make sure live streaming is enabled on your channel.",
+            { duration: 5000 }
+          );
+        } else if (statusCode === 400) {
+          toast.error(`Invalid stream settings: ${errorMessage}`, { duration: 5000 });
+        } else if (statusCode === 429) {
+          toast.error("YouTube API quota exceeded. Please try again later.", { duration: 5000 });
+        } else {
+          // Generic error with details
+          toast.error(`Failed to start stream: ${errorMessage}`, { duration: 5000 });
+        }
+      } else {
+        // Handle non-Axios errors
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        toast.error(`Failed to start stream: ${errorMessage}`, { duration: 5000 });
+      }
+
       console.error("Error starting stream:", error);
-      toast.error("Failed to start stream");
     }
   };
 
@@ -273,7 +331,6 @@ export default function StreamingStudio() {
                   className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-gray-300">
                   Description
@@ -290,8 +347,99 @@ export default function StreamingStudio() {
                 />
               </div>
 
-              <Separator className="bg-white/10" />
+              <div className="space-y-2">
+                <Label className="text-gray-300">Privacy Settings</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <div
+                    className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
+                      streamSettings.privacyStatus === "unlisted"
+                        ? "bg-purple-900/50 border-purple-500"
+                        : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
+                    onClick={() =>
+                      setStreamSettings((prev) => ({
+                        ...prev,
+                        privacyStatus: PrivacyStatus.UNLISTED,
+                      }))
+                    }
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full mb-2 border-2 flex items-center justify-center ${
+                        streamSettings.privacyStatus === "unlisted"
+                          ? "border-purple-500"
+                          : "border-white/30"
+                      }`}
+                    >
+                      {streamSettings.privacyStatus === "unlisted" && (
+                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      )}
+                    </div>
+                    <span className="text-sm text-white font-medium">Unlisted</span>
+                    <span className="text-xs text-gray-400 text-center mt-1">
+                      Visible with link only
+                    </span>
+                  </div>
 
+                  <div
+                    className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
+                      streamSettings.privacyStatus === "private"
+                        ? "bg-purple-900/50 border-purple-500"
+                        : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
+                    onClick={() =>
+                      setStreamSettings((prev) => ({
+                        ...prev,
+                        privacyStatus: PrivacyStatus.PRIVATE,
+                      }))
+                    }
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full mb-2 border-2 flex items-center justify-center ${
+                        streamSettings.privacyStatus === "private"
+                          ? "border-purple-500"
+                          : "border-white/30"
+                      }`}
+                    >
+                      {streamSettings.privacyStatus === "private" && (
+                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      )}
+                    </div>
+                    <span className="text-sm text-white font-medium">Private</span>
+                    <span className="text-xs text-gray-400 text-center mt-1">
+                      Only you can view
+                    </span>
+                  </div>
+
+                  <div
+                    className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
+                      streamSettings.privacyStatus === "public"
+                        ? "bg-purple-900/50 border-purple-500"
+                        : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
+                    onClick={() =>
+                      setStreamSettings((prev) => ({
+                        ...prev,
+                        privacyStatus: PrivacyStatus.PUBLIC,
+                      }))
+                    }
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full mb-2 border-2 flex items-center justify-center ${
+                        streamSettings.privacyStatus === "public"
+                          ? "border-purple-500"
+                          : "border-white/30"
+                      }`}
+                    >
+                      {streamSettings.privacyStatus === "public" && (
+                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      )}
+                    </div>
+                    <span className="text-sm text-white font-medium">Public</span>
+                    <span className="text-xs text-gray-400 text-center mt-1">Anyone can find</span>
+                  </div>
+                </div>
+              </div>
+              <Separator className="bg-white/10" />
               <div className="space-y-4">
                 <Button
                   onClick={isStreaming ? stopStream : startStream}
