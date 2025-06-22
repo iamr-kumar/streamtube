@@ -1,44 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { google } from "googleapis";
-import type { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import { authOptions } from "../../auth/[...nextauth]/route";
 
-// Define auth options inline to match the configuration in [...nextauth]/route.ts
-const authOptions: NextAuthOptions = {
-  session: {
-    strategy: "jwt",
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.force-ssl",
-        },
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, account }) {
-      if (account) {
-        token.accessToken = account.access_token;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      // Use type assertion to add accessToken to session
-      (session as any).accessToken = token.accessToken;
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/auth/signin",
-  },
-};
+interface CreateStreamRequest {
+  title: string;
+  description?: string;
+  privacy?: string;
+}
+
+interface CreateStreamResponse {
+  success: boolean;
+  broadcastId: string;
+  streamId: string;
+  streamKey: string;
+  rtmpUrl: string;
+}
+
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse the request body
-    const body = await request.json();
+    const body: CreateStreamRequest = await request.json();
     const { title, description, privacy } = body;
 
     if (!title || !title.trim()) {
@@ -126,7 +105,7 @@ export async function POST(request: NextRequest) {
       streamId: streamId,
     });
 
-    return NextResponse.json({
+    return NextResponse.json<CreateStreamResponse>({
       success: true,
       broadcastId,
       streamId,
