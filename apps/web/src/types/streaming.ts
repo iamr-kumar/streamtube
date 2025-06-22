@@ -7,7 +7,7 @@ export enum PrivacyStatus {
 export interface CreateBroadcastRequest {
   title: string;
   description?: string;
-  privacy: PrivacyStatus;
+  privacyStatus: PrivacyStatus;
 }
 
 export interface CreateBroadcastResponse {

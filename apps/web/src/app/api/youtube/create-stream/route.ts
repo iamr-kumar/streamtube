@@ -25,7 +25,7 @@ export async function POST(
 
     // Parse the request body
     const body: CreateBroadcastRequest = await request.json();
-    const { title, description, privacy } = body;
+    const { title, description, privacyStatus } = body;
 
     if (!title || !title.trim()) {
       return NextResponse.json({ error: "Stream title is required" }, { status: 400 });
@@ -52,7 +52,7 @@ export async function POST(
           scheduledStartTime: new Date().toISOString(),
         },
         status: {
-          privacyStatus: privacy || PrivacyStatus.UNLISTED,
+          privacyStatus: privacyStatus || PrivacyStatus.UNLISTED,
         },
       },
     });
@@ -100,7 +100,7 @@ export async function POST(
         id: broadcastId,
         title: title.trim(),
         description: description || "",
-        privacyStatus: privacy || PrivacyStatus.UNLISTED,
+        privacyStatus: privacyStatus || PrivacyStatus.UNLISTED,
         url: `https://www.youtube.com/watch?v=${broadcastId}`,
       },
       stream: {

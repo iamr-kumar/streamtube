@@ -352,7 +352,7 @@ export default function StreamingStudio() {
                 <div className="grid grid-cols-3 gap-2">
                   <div
                     className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
-                      streamSettings.privacyStatus === "unlisted"
+                      streamSettings.privacyStatus === PrivacyStatus.UNLISTED
                         ? "bg-purple-900/50 border-purple-500"
                         : "bg-white/5 border-white/10 hover:bg-white/10"
                     }`}
@@ -365,12 +365,12 @@ export default function StreamingStudio() {
                   >
                     <div
                       className={`w-4 h-4 rounded-full mb-2 border-2 flex items-center justify-center ${
-                        streamSettings.privacyStatus === "unlisted"
+                        streamSettings.privacyStatus === PrivacyStatus.UNLISTED
                           ? "border-purple-500"
                           : "border-white/30"
                       }`}
                     >
-                      {streamSettings.privacyStatus === "unlisted" && (
+                      {streamSettings.privacyStatus === PrivacyStatus.UNLISTED && (
                         <div className="w-2 h-2 rounded-full bg-purple-500"></div>
                       )}
                     </div>
@@ -382,7 +382,7 @@ export default function StreamingStudio() {
 
                   <div
                     className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
-                      streamSettings.privacyStatus === "private"
+                      streamSettings.privacyStatus === PrivacyStatus.PRIVATE
                         ? "bg-purple-900/50 border-purple-500"
                         : "bg-white/5 border-white/10 hover:bg-white/10"
                     }`}
@@ -395,12 +395,12 @@ export default function StreamingStudio() {
                   >
                     <div
                       className={`w-4 h-4 rounded-full mb-2 border-2 flex items-center justify-center ${
-                        streamSettings.privacyStatus === "private"
+                        streamSettings.privacyStatus === PrivacyStatus.PRIVATE
                           ? "border-purple-500"
                           : "border-white/30"
                       }`}
                     >
-                      {streamSettings.privacyStatus === "private" && (
+                      {streamSettings.privacyStatus === PrivacyStatus.PRIVATE && (
                         <div className="w-2 h-2 rounded-full bg-purple-500"></div>
                       )}
                     </div>
@@ -412,7 +412,7 @@ export default function StreamingStudio() {
 
                   <div
                     className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
-                      streamSettings.privacyStatus === "public"
+                      streamSettings.privacyStatus === PrivacyStatus.PUBLIC
                         ? "bg-purple-900/50 border-purple-500"
                         : "bg-white/5 border-white/10 hover:bg-white/10"
                     }`}
@@ -425,12 +425,12 @@ export default function StreamingStudio() {
                   >
                     <div
                       className={`w-4 h-4 rounded-full mb-2 border-2 flex items-center justify-center ${
-                        streamSettings.privacyStatus === "public"
+                        streamSettings.privacyStatus === PrivacyStatus.PUBLIC
                           ? "border-purple-500"
                           : "border-white/30"
                       }`}
                     >
-                      {streamSettings.privacyStatus === "public" && (
+                      {streamSettings.privacyStatus === PrivacyStatus.PUBLIC && (
                         <div className="w-2 h-2 rounded-full bg-purple-500"></div>
                       )}
                     </div>
