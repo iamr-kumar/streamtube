@@ -115,7 +115,7 @@ export class StreamManager {
     }
   }
 
-  public wrtieStreamData(sessionId: string, data: Buffer): boolean {
+  public writeStreamData(sessionId: string, data: Buffer): boolean {
     const session = this.sessions.get(sessionId);
     if (!session || !session.isActive || !session.ffmpegProcess) {
       console.error(`Session ${sessionId} is not active or does not have an FFmpeg process`);

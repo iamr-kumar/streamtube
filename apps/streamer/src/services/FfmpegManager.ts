@@ -136,7 +136,7 @@ export class FfmpegManager {
       }
 
       // Send SIGTERM to gracefully stop ffmpeg
-      // SIGTEMR allows ffmpeg to finish processing any remaining data
+      // SIGTERM allows ffmpeg to finish processing any remaining data
       this.process.kill("SIGTERM");
 
       // Force kill if it doesn't exit after a timeout
@@ -259,7 +259,7 @@ export class FfmpegManager {
       const output = data.toString();
 
       if (output.includes("frame=")) {
-        const stats = this.parseFfmpegStates(output);
+        const stats = this.parseFfmpegStats(output);
         if (stats) {
           this.onStats?.(stats);
           this.lastStatsTime = Date.now();
@@ -310,7 +310,7 @@ export class FfmpegManager {
    * @param output The output string from ffmpeg's stderr or progress output.
    * @returns FfmpegStats object containing parsed statistics or null if parsing fails.
    */
-  private parseFfmpegStates(output: string): FfmpegStats | null {
+  private parseFfmpegStats(output: string): FfmpegStats | null {
     try {
       const lines = output.split("\n");
       const stats: Partial<FfmpegStats> = {};
