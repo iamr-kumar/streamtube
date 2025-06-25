@@ -17,12 +17,18 @@ export class StreamManager {
     return StreamManager.instance;
   }
 
-  constructor() {
+  private constructor() {
     this.heartBeatInterval = setInterval(() => {
       this.checkHeartBeats();
     }, 30000); // Check heartbeats every 30 seconds
   }
 
+  /**
+   * Creates a new stream session and associates it with the given WebSocket connection.
+   * @param ws The WebSocket connection for the stream
+   * @param config The configuration for the stream session
+   * @returns A unique session ID for the created stream session
+   */
   public createSession(ws: WebSocket, config: StreamConfig): string {
     const sessionId = uuidv4();
     const session: StreamSession = {
@@ -43,6 +49,14 @@ export class StreamManager {
     return sessionId;
   }
 
+  /**
+   * Starts a stream session using FFmpeg.
+   * This method initializes the FFmpeg process with the provided configuration and sets
+   * it up to handle the stream data. It also sets up event handlers for
+   * FFmpeg process events such as stats, errors, and end.
+   * @param sessionId The unique identifier for the stream session to start
+   * @returns true if the stream was started successfully, false otherwise
+   */
   public startStream(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
     if (!session) {
@@ -85,6 +99,11 @@ export class StreamManager {
     }
   }
 
+  /**
+   * Stops a stream session and cleans up the associated resources.
+   * @param sessionId The unique identifier for the stream session to stop
+   * @returns true if the stream was stopped successfully, false otherwise
+   */
   public stopStream(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
     if (!session) {
@@ -115,6 +134,12 @@ export class StreamManager {
     }
   }
 
+  /**
+   * Writes data to the active stream session and internally passes onto the FFmpeg process.
+   * @param sessionId The unique identifier for the stream session to write data to
+   * @param data The data to write to the stream, typically a Buffer containing video/audio data
+   * @returns
+   */
   public writeStreamData(sessionId: string, data: Buffer): boolean {
     const session = this.sessions.get(sessionId);
     if (!session || !session.isActive || !session.ffmpegProcess) {
@@ -131,6 +156,13 @@ export class StreamManager {
     }
   }
 
+  /**
+   * Removes a stream session associated with the given WebSocket connection.
+   * This method stops the stream if it is active, cleans up the session data,
+   * and removes the WebSocket association.
+   * @param ws The WebSocket connection to remove
+   * @returns No return value
+   */
   public removeSession(ws: WebSocket): void {
     const sessionId = this.wsToSession.get(ws);
     if (!sessionId) {
@@ -147,23 +179,46 @@ export class StreamManager {
     this.wsToSession.delete(ws);
   }
 
+  /**
+   * Gets a stream session by its unique identifier.
+   * @param sessionId The unique identifier for the stream session to retrieve
+   * @returns The StreamSession object if found, or undefined if not found
+   */
   public getSession(sessionId: string): StreamSession | undefined {
     return this.sessions.get(sessionId);
   }
 
+  /**
+   * Gets a stream session associated with a specific WebSocket connection.
+   * @param ws The WebSocket connection to retrieve the session for
+   * @returns StreamSession object if found, or undefined if not found
+   */
   public getSessionByWebSocket(ws: WebSocket): StreamSession | undefined {
     const sessionId = this.wsToSession.get(ws);
     return sessionId ? this.sessions.get(sessionId) : undefined;
   }
 
+  /**
+   * Gets all stream sessions.
+   * @returns An array of all active stream sessions.
+   */
   public getAllSessions(): StreamSession[] {
     return Array.from(this.sessions.values());
   }
 
+  /**
+   * Gets all active stream sessions.
+   * @returns An array of all active stream sessions.
+   */
   public getActivStreams(): StreamSession[] {
     return Array.from(this.sessions.values()).filter((session) => session.isActive);
   }
 
+  /**
+   * Broadcasts a message to the WebSocket connection associated with a specific stream session.
+   * @param sessionId The unique identifier for the stream session to broadcast the message to
+   * @param message The message to broadcast to the session
+   */
   private broadcastToSession(sessionId: string, message: WebSocketMessage): void {
     for (const [ws, id] of this.wsToSession.entries()) {
       if (id === sessionId) {
@@ -183,6 +238,11 @@ export class StreamManager {
     }
   }
 
+  /**
+   * Updates the heartbeat for a specific WebSocket connection.
+   * This method is called periodically to ensure that the session is still active.
+   * @param ws The WebSocket connection to update the heartbeat for
+   */
   public updateHeartBeat(ws: WebSocket): void {
     const sessionId = this.wsToSession.get(ws);
     if (sessionId) {
@@ -194,6 +254,10 @@ export class StreamManager {
     }
   }
 
+  /**
+   * Checks the heartbeats of all active sessions and removes those that have timed out.
+   * This method runs periodically to ensure that inactive sessions are cleaned up.
+   */
   private checkHeartBeats(): void {
     const now = new Date();
     const threshold = 60000; // 1 minute
@@ -212,6 +276,9 @@ export class StreamManager {
     }
   }
 
+  /**
+   * Destroys the StreamManager instance, cleaning up all sessions and WebSocket connections.
+   */
   public destroy(): void {
     for (const session of this.sessions.values()) {
       if (session.isActive) {

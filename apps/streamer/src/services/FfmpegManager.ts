@@ -10,7 +10,7 @@ import { FfmpegStats, StreamConfig } from "../types";
  */
 export class FfmpegManager {
   private process: ChildProcess | null = null;
-  // Temprorily store input buffers until ffmpeg is ready
+  // Temporarily store input buffers until ffmpeg is ready
   private inputBuffer: Buffer[] = [];
   private isProcessing = false;
   private config: StreamConfig;
@@ -20,6 +20,8 @@ export class FfmpegManager {
   private sessionId: string;
   private startTime: Date | null = null;
   private lastStatsTime = 0;
+
+  public static BUFFER_SIZE = 100; // Maximum size of the input buffer
 
   constructor(
     config: StreamConfig,
@@ -49,7 +51,7 @@ export class FfmpegManager {
       this.startTime = new Date();
       const ffmpegArgs = this.buildFfmpegArgs();
 
-      // Spwan the ffmpeg process
+      // Spawn the ffmpeg process
       this.process = spawn("ffmpeg", ffmpegArgs, {
         stdio: ["pipe", "pipe", "pipe"],
       });
@@ -84,7 +86,7 @@ export class FfmpegManager {
         })
       );
 
-      if (this.inputBuffer.length < 100) {
+      if (this.inputBuffer.length < FfmpegManager.BUFFER_SIZE) {
         this.inputBuffer.push(data);
         return true;
       } else {
@@ -103,12 +105,12 @@ export class FfmpegManager {
       }
 
       // Write the new data to ffmpeg stdin
-      const sucess = this.process.stdin.write(data);
-      if (!sucess) {
+      const success = this.process.stdin.write(data);
+      if (!success) {
         console.warn("FFmpeg stdin write failed, dropping data");
       }
 
-      return sucess;
+      return success;
     } catch (error) {
       console.error(`Error writing data to ffmpeg stdin: ${error}`);
       this.onError?.(`Error writing data: ${error}`);
