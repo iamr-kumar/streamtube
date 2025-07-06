@@ -3,13 +3,15 @@
 import { useRef, useEffect, useState } from "react";
 
 interface StreamCanvasProps {
+  isStreaming: boolean;
   cameraEnabled: boolean;
   screenEnabled: boolean;
   micEnabled: boolean;
-  onStreamData: (data: ArrayBuffer) => void;
+  onStreamData: (data: Blob) => void;
 }
 
 export default function StreamCanvas({
+  isStreaming,
   cameraEnabled,
   screenEnabled,
   micEnabled,
@@ -21,6 +23,8 @@ export default function StreamCanvas({
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const animationFrameRef = useRef<number>(0);
 
   // Initialize camera stream
   useEffect(() => {
@@ -30,7 +34,7 @@ export default function StreamCanvas({
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
-            frameRate: { ideal: 30 },
+            frameRate: { ideal: 25 },
           },
         })
         .then((stream) => {
@@ -57,9 +61,9 @@ export default function StreamCanvas({
       navigator.mediaDevices
         .getDisplayMedia({
           video: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30 },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 25 },
           },
           audio: true,
         })
@@ -100,7 +104,7 @@ export default function StreamCanvas({
     }
   }, [micEnabled]);
 
-  // Canvas composition logic
+  // Canvas composition and streaming logic
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -108,10 +112,12 @@ export default function StreamCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let animationFrame: number;
-    let recorder: MediaRecorder | null = null;
+    let isDrawing = false;
 
     const draw = () => {
+      if (isDrawing) return;
+      isDrawing = true;
+
       // Clear canvas
       ctx.fillStyle = "#1a1a1a";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -135,8 +141,6 @@ export default function StreamCanvas({
           const x = (canvas.width - drawWidth) / 2;
           const y = (canvas.height - drawHeight) / 2;
 
-          console.log(drawWidth, drawHeight, x, y);
-
           ctx.drawImage(screenVideo, x, y, drawWidth, drawHeight);
           hasContent = true;
 
@@ -144,15 +148,11 @@ export default function StreamCanvas({
           if (cameraEnabled && videoRef.current && videoRef.current.readyState >= 2) {
             const cameraVideo = videoRef.current;
             if (cameraVideo.videoWidth > 0 && cameraVideo.videoHeight > 0) {
-              // Make the PiP larger - increase from 0.25 to 0.35 of canvas width
-              const pipSize = Math.min(canvas.width * 0.35, 300); // Larger maximum size
+              const pipSize = Math.min(canvas.width * 0.35, 300);
               const pipX = canvas.width - pipSize - 20;
               const pipY = canvas.height - pipSize - 20;
 
-              // Save the current context state before clipping
               ctx.save();
-
-              // Create circular clipping path
               ctx.beginPath();
               const radius = pipSize / 2;
               const centerX = pipX + radius;
@@ -161,17 +161,11 @@ export default function StreamCanvas({
               ctx.closePath();
               ctx.clip();
 
-              // Draw a background for the circular PiP
               ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
               ctx.fillRect(pipX, pipY, pipSize, pipSize);
-
-              // Draw the camera feed in a circle
               ctx.drawImage(cameraVideo, pipX, pipY, pipSize, pipSize);
-
-              // Restore the context to remove the clipping
               ctx.restore();
 
-              // Draw border for the circular PiP
               ctx.beginPath();
               ctx.arc(centerX, centerY, radius, 0, Math.PI * 2, true);
               ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
@@ -198,7 +192,6 @@ export default function StreamCanvas({
           const x = (canvas.width - drawWidth) / 2;
           const y = (canvas.height - drawHeight) / 2;
 
-          // Draw the camera feed
           ctx.drawImage(video, x, y, drawWidth, drawHeight);
 
           // Add a subtle vignette effect
@@ -238,14 +231,37 @@ export default function StreamCanvas({
         ctx.fillText(message, canvas.width / 2, canvas.height / 2);
       }
 
-      animationFrame = requestAnimationFrame(draw);
+      isDrawing = false;
+      animationFrameRef.current = requestAnimationFrame(draw);
     };
 
+    // Start drawing loop
     draw();
 
-    // Set up MediaRecorder after a short delay to ensure streams are ready
-    const setupRecorder = () => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [cameraEnabled, screenEnabled, cameraStream, screenStream]);
+
+  // MediaRecorder setup and management
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Stop existing recorder
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      recorderRef.current.stop();
+    }
+
+    if (!isStreaming) {
+      return;
+    }
+
+    const setupRecorder = async () => {
       try {
+        // Create canvas stream with higher frame rate
         const stream = canvas.captureStream(30);
 
         // Add audio track if microphone is enabled
@@ -256,57 +272,82 @@ export default function StreamCanvas({
           }
         }
 
-        // Check if MediaRecorder supports the desired format
-        const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
-          ? "video/webm;codecs=vp8,opus"
-          : "video/webm";
+        // Use better codec options
+        const mimeType = (() => {
+          if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")) {
+            return "video/webm;codecs=vp8,opus";
+          } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
+            return "video/webm;codecs=vp8";
+          } else if (MediaRecorder.isTypeSupported("video/webm")) {
+            return "video/webm";
+          } else {
+            return "";
+          }
+        })();
 
-        recorder = new MediaRecorder(stream, {
+        const recorder = new MediaRecorder(stream, {
           mimeType,
-          videoBitsPerSecond: 2500000,
-          audioBitsPerSecond: 128000,
+          videoBitsPerSecond: 2500000, // 2.5 Mbps
+          audioBitsPerSecond: 128000, // 128 kbps
         });
 
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
-            event.data.arrayBuffer().then((buffer) => {
-              onStreamData(buffer);
-            });
+            onStreamData(event.data);
           }
         };
 
-        recorder.start(100); // Send data every 100ms
+        recorder.onerror = (event) => {
+          console.error("MediaRecorder error:", event);
+        };
+
+        recorder.onstart = () => {
+          console.log("MediaRecorder started");
+        };
+
+        recorder.onstop = () => {
+          console.log("MediaRecorder stopped");
+        };
+
+        // Start recording with smaller time slices for better real-time performance
+        recorder.start(33); // ~30 FPS (1000ms / 30fps = 33ms)
+        recorderRef.current = recorder;
+
+        console.log("MediaRecorder started with codec:", mimeType);
       } catch (error) {
         console.error("MediaRecorder setup error:", error);
       }
     };
 
-    // Wait a bit for streams to be ready
-    const timeout = setTimeout(setupRecorder, 1000);
+    // Wait for streams to be ready
+    const timeout = setTimeout(setupRecorder, 500);
 
     return () => {
       clearTimeout(timeout);
-      cancelAnimationFrame(animationFrame);
-      if (recorder && recorder.state !== "inactive") {
-        recorder.stop();
+      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+        recorderRef.current.stop();
       }
     };
-  }, [
-    cameraEnabled,
-    screenEnabled,
-    micEnabled,
-    cameraStream,
-    screenStream,
-    micStream,
-    onStreamData,
-  ]);
+  }, [isStreaming, micStream, onStreamData]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+        recorderRef.current.stop();
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="relative">
       <canvas
         ref={canvasRef}
-        width={1920}
-        height={1080}
+        width={1280}
+        height={720}
         className="w-full h-auto bg-gray-900 rounded-lg shadow-2xl"
       />
 
@@ -332,70 +373,13 @@ export default function StreamCanvas({
               Mic Active
             </div>
           )}
+          {isStreaming && (
+            <div className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
+              Live Streaming
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-// // Demo component to test the StreamCanvas
-// function StreamCanvasDemo() {
-//   const [cameraEnabled, setCameraEnabled] = useState(false);
-//   const [screenEnabled, setScreenEnabled] = useState(false);
-//   const [micEnabled, setMicEnabled] = useState(false);
-
-//   const handleStreamData = (data: ArrayBuffer) => {
-//     // Mock handler for stream data
-//     console.log("Received stream data:", data.byteLength, "bytes");
-//   };
-
-//   return (
-//     <div className="p-6 max-w-4xl mx-auto">
-//       <h1 className="text-2xl font-bold mb-6">StreamCanvas Debug Test</h1>
-
-//       <div className="mb-6 flex space-x-4">
-//         <button
-//           onClick={() => setCameraEnabled(!cameraEnabled)}
-//           className={`px-4 py-2 rounded ${
-//             cameraEnabled
-//               ? 'bg-green-600 text-white'
-//               : 'bg-gray-600 text-white hover:bg-gray-500'
-//           }`}
-//         >
-//           {cameraEnabled ? 'Disable Camera' : 'Enable Camera'}
-//         </button>
-
-//         <button
-//           onClick={() => setScreenEnabled(!screenEnabled)}
-//           className={`px-4 py-2 rounded ${
-//             screenEnabled
-//               ? 'bg-blue-600 text-white'
-//               : 'bg-gray-600 text-white hover:bg-gray-500'
-//           }`}
-//         >
-//           {screenEnabled ? 'Stop Screen Share' : 'Start Screen Share'}
-//         </button>
-
-//         <button
-//           onClick={() => setMicEnabled(!micEnabled)}
-//           className={`px-4 py-2 rounded ${
-//             micEnabled
-//               ? 'bg-purple-600 text-white'
-//               : 'bg-gray-600 text-white hover:bg-gray-500'
-//           }`}
-//         >
-//           {micEnabled ? 'Disable Mic' : 'Enable Mic'}
-//         </button>
-//       </div>
-
-//       <StreamCanvas
-//         cameraEnabled={cameraEnabled}
-//         screenEnabled={screenEnabled}
-//         micEnabled={micEnabled}
-//         onStreamData={handleStreamData}
-//       />
-//     </div>
-//   );
-// }
-
-// export default StreamCanvas;

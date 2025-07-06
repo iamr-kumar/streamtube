@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { StreamConfig } from "@/types/streaming";
+import { StreamConfig, StreamInfo, StreamStatus } from "@/types/streaming";
 import {
   LogOut,
   Mic,
@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import StreamCanvas from "./StreamCanvas";
 import { useStream } from "@/hooks/useStream";
+import { StartStreamModal } from "./StartStreamModal";
 
 export default function StreamingStudio() {
   const router = useRouter();
@@ -30,13 +31,35 @@ export default function StreamingStudio() {
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [micEnabled, setMicEnabled] = useState(false);
   const [screenEnabled, setScreenEnabled] = useState(false);
+  const [streamInfo, setStreamInfo] = useState<StreamInfo | null>(null);
+
+  const [showModal, setShowModal] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalSuccess, setModalSuccess] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  const openModal = () => {
+    setShowModal(true);
+    setModalLoading(false);
+    setModalSuccess(false);
+    setModalError(null);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setModalLoading(false);
+    setModalSuccess(false);
+    setModalError(null);
+  };
 
   const {
+    status,
     connect,
     configureStream,
     disconnect,
     startStream: startStreamClient,
     stopStream: stopStreamClient,
+    sendStreamData,
   } = useStream();
 
   useEffect(() => {
@@ -54,21 +77,44 @@ export default function StreamingStudio() {
     };
   }, [connect, disconnect]);
 
+  useEffect(() => {
+    const activeStream = localStorage.getItem("activeStream");
+    if (activeStream) {
+      const streamData: StreamInfo = JSON.parse(activeStream);
+      setStreamInfo(streamData);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showModal && modalLoading && status === StreamStatus.STREAMING) {
+      setModalLoading(false);
+      setModalSuccess(true);
+      setModalError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
   const startStream = () => {
-    // TODO: Implement actual streaming logic
-    // This would typically involve configuring the stream with existing broadcast data
+    if (!streamInfo) {
+      console.error("No active stream found. Please create a stream from the dashboard.");
+      return;
+    }
     const streamConfig: StreamConfig = {
-      rtmpUrl: "rtmp://example.com/live", // This should come from created broadcast
-      streamKey: "stream-key", // This should come from created broadcast
-      resolution: { width: 1920, height: 1080 },
-      frameRate: 30,
+      rtmpUrl: streamInfo.stream.rtmpUrl, // This should come from created broadcast
+      streamKey: streamInfo.stream.streamKey, // This should come from created broadcast
+      resolution: { width: 1280, height: 720 },
+      frameRate: 25,
       bitrate: 2500,
       audioSampleRate: 44100,
       audioChannels: 2,
     };
 
+    openModal();
+    setModalLoading(true);
+
     if (configureStream(streamConfig) && startStreamClient()) {
       setIsStreaming(true);
+      console.log(isStreaming ? "Stream started successfully" : "Failed to start stream");
     }
   };
 
@@ -138,11 +184,12 @@ export default function StreamingStudio() {
             </CardHeader>
             <CardContent>
               <StreamCanvas
+                isStreaming={isStreaming}
                 cameraEnabled={cameraEnabled}
                 screenEnabled={screenEnabled}
                 micEnabled={micEnabled}
-                onStreamData={() => {
-                  // TODO: Send stream data to WebSocket server when streaming starts
+                onStreamData={(data) => {
+                  sendStreamData(data);
                 }}
               />
             </CardContent>
@@ -321,6 +368,14 @@ export default function StreamingStudio() {
           </Card>
         </div>
       </div>
+      {/* Stream Creation Modal */}
+      <StartStreamModal
+        isOpen={showModal}
+        onClose={closeModal}
+        isLoading={modalLoading}
+        success={modalSuccess}
+        error={modalError}
+      />
     </div>
   );
 }

@@ -1,7 +1,6 @@
 {
-  "name": "streamer",
+  "name": "@streamtube/streamer",
   "version": "1.0.0",
-  "type": "commonjs",
   "main": "dist/index.js",
   "dependencies": {
     "cors": "^2.8.5",
@@ -36,11 +35,7 @@
     "ignore": [
       "src/**/*.spec.ts"
     ],
-    "exec": "ts-node --esm src/index.ts"
-  },
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifierResolution": "node"
+    "exec": "ts-node src/index.ts"
   },
   "keywords": [
     "streaming",

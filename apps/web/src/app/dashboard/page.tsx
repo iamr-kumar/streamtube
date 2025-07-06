@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { CreateBroadcastResponse, PrivacyStatus } from "@/types/streaming";
+import { StreamInfo, PrivacyStatus } from "@/types/streaming";
 import axios from "axios";
 import { LogOut, Play, User, Youtube, Settings, Monitor } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -32,7 +32,7 @@ export default function StudioDashboard() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalSuccess, setModalSuccess] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [broadcastData, setBroadcastData] = useState<CreateBroadcastResponse | null>(null);
+  const [broadcastData, setBroadcastData] = useState<StreamInfo | null>(null);
 
   // Reset modal state when opening
   const openModal = () => {
@@ -52,6 +52,9 @@ export default function StudioDashboard() {
   };
 
   const handleGoToStudio = () => {
+    if (broadcastData) {
+      localStorage.setItem("activeStream", JSON.stringify(broadcastData));
+    }
     closeModal();
     router.push("/studio");
   };
@@ -82,7 +85,7 @@ export default function StudioDashboard() {
         privacyStatus: streamSettings.privacyStatus,
       });
 
-      const { success, broadcast, stream } = response.data as CreateBroadcastResponse;
+      const { success, broadcast, stream } = response.data as StreamInfo;
       console.log("API Response:", response.data);
 
       if (!success) {

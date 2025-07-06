@@ -120,7 +120,7 @@ export class StreamingClient {
     }
   }
 
-  public sendData(data: ArrayBuffer): boolean {
+  public sendData(data: Blob): boolean {
     if (!this.isStreaming()) {
       console.error("Cannot send data: Stream is not active");
       return false;

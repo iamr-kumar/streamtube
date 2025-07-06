@@ -10,7 +10,7 @@ export interface CreateBroadcastRequest {
   privacyStatus: PrivacyStatus;
 }
 
-export interface CreateBroadcastResponse {
+export interface StreamInfo {
   success: boolean;
   broadcast: {
     id: string;

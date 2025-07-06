@@ -14,7 +14,7 @@ export interface StreamConfig {
 }
 
 export interface WebSocketMessage {
-  type: "stream-start" | "stream-stop" | "stream-data";
+  type: "stream-start" | "stream-stop" | "stream-data" | "stream-config" | "connection" | "error";
   payload?: any;
   streamId?: string;
   timestamp?: number;

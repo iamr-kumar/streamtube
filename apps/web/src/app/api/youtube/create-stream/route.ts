@@ -5,13 +5,13 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import {
   ApiErrorResult,
   CreateBroadcastRequest,
-  CreateBroadcastResponse,
+  StreamInfo,
   PrivacyStatus,
 } from "@/types/streaming";
 
 export async function POST(
   request: NextRequest
-): Promise<NextResponse<CreateBroadcastResponse | ApiErrorResult>> {
+): Promise<NextResponse<StreamInfo | ApiErrorResult>> {
   try {
     // Get the session to access the user's access token
     const session = await getServerSession(authOptions);
@@ -94,7 +94,7 @@ export async function POST(
       streamId: streamId,
     });
 
-    return NextResponse.json<CreateBroadcastResponse>({
+    return NextResponse.json<StreamInfo>({
       success: true,
       broadcast: {
         id: broadcastId,

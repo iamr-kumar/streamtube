@@ -77,44 +77,43 @@ export class FfmpegManager {
    */
   public writeData(data: Buffer): boolean {
     if (!this.process || !this.process.stdin || !this.isProcessing) {
-      console.log(
-        JSON.stringify({
-          sessionId: this.sessionId,
-          error: "FFmpeg process is not ready, buffering data",
-          bufferSize: this.inputBuffer.length,
-          dataSize: data.length,
-        })
-      );
-
-      if (this.inputBuffer.length < FfmpegManager.BUFFER_SIZE) {
-        this.inputBuffer.push(data);
-        return true;
-      } else {
-        console.warn("Input buffer is full, dropping data");
-        return false;
-      }
+      console.warn("FFmpeg process is not ready or not processing");
+      return false;
     }
 
     try {
-      // Flush any buffered data before writing new data
-      while (this.inputBuffer.length > 0) {
-        const bufferedData = this.inputBuffer.shift();
-        if (bufferedData) {
-          this.process.stdin.write(bufferedData);
-        }
-      }
-
-      // Write the new data to ffmpeg stdin
       const success = this.process.stdin.write(data);
-      if (!success) {
-        console.warn("FFmpeg stdin write failed, dropping data");
-      }
-
       return success;
     } catch (error) {
       console.error(`Error writing data to ffmpeg stdin: ${error}`);
-      this.onError?.(`Error writing data: ${error}`);
       return false;
+    }
+  }
+
+  /**
+   * Helper method to flush the input buffer
+   */
+  private flushBuffer(): void {
+    if (!this.process || !this.process.stdin || !this.process.stdin.writable) {
+      return;
+    }
+
+    while (this.inputBuffer.length > 0) {
+      const bufferedData = this.inputBuffer[0]; // Peek at first item
+
+      const writeResult = this.process.stdin.write(bufferedData);
+      if (!writeResult) {
+        // Buffer is full again, wait for next drain
+        console.warn("FFmpeg stdin buffer full again during flush");
+        this.process.stdin.once("drain", () => {
+          this.flushBuffer();
+        });
+        break;
+      }
+
+      // Successfully wrote, remove from buffer
+      this.inputBuffer.shift();
+      console.log(`Flushed ${bufferedData.length} bytes from buffer`);
     }
   }
 
@@ -159,37 +158,49 @@ export class FfmpegManager {
       this.config;
 
     return [
-      // Input configuration
+      // Input configuration - optimized for WebM from MediaRecorder
       "-f",
-      "webm",
+      "matroska", // Use matroska format for WebM
       "-i",
       "-", // Read from stdin
 
-      // Video codec settings
+      // Input buffer settings for better real-time performance
+      "-fflags",
+      "+genpts+igndts",
+      "-avoid_negative_ts",
+      "make_zero",
+      "-max_delay",
+      "0",
+      "-reorder_queue_size",
+      "0",
+
+      // Video codec settings - optimized for live streaming
       "-c:v",
       "libx264",
       "-preset",
-      "veryfast",
+      "ultrafast", // Changed from veryfast to ultrafast
       "-tune",
       "zerolatency",
       "-profile:v",
-      "baseline",
+      "main", // Changed from baseline to main for better quality
       "-level",
-      "3.1",
+      "4.0", // Increased level for better compatibility
 
       // Video quality settings
       "-b:v",
       `${bitrate}k`,
       "-maxrate",
-      `${Math.floor(bitrate * 1.2)}k`,
+      `${bitrate}k`, // Set maxrate = bitrate for consistent quality
       "-bufsize",
-      `${Math.floor(bitrate * 2)}k`,
+      `${Math.floor(bitrate * 1.5)}k`, // Smaller buffer for lower latency
       "-g",
-      String(frameRate * 2), // Keyframe interval
+      String(frameRate), // Keyframe every second
       "-keyint_min",
-      String(frameRate),
+      String(Math.floor(frameRate / 2)), // Minimum keyframe interval
       "-sc_threshold",
       "0",
+      "-force_key_frames",
+      "expr:gte(t,n_forced*2)", // Force keyframes every 2 seconds
 
       // Video format settings
       "-s",
@@ -198,6 +209,12 @@ export class FfmpegManager {
       String(frameRate),
       "-pix_fmt",
       "yuv420p",
+      "-colorspace",
+      "bt709",
+      "-color_primaries",
+      "bt709",
+      "-color_trc",
+      "bt709",
 
       // Audio codec settings
       "-c:a",
@@ -211,29 +228,28 @@ export class FfmpegManager {
       "-af",
       "aresample=async=1:min_hard_comp=0.100000:first_pts=0",
 
-      // Output format
+      // Streaming optimizations
       "-f",
       "flv",
       "-flvflags",
       "no_duration_filesize",
-
-      // Streaming optimizations
-      "-avoid_negative_ts",
-      "make_zero",
-      "-fflags",
-      "+genpts",
       "-flags",
       "+global_header",
+      "-rtmp_live",
+      "live",
+      "-rtmp_buffer",
+      "100", // Small buffer for low latency
 
-      // Progress and error handling
+      // Progress and logging
       "-progress",
       "pipe:2",
       "-v",
-      "info",
-      "-stats",
+      "warning", // Reduced verbosity
+      "-stats_period",
+      "1", // Report stats every second
 
-      // Output URL to stream to YouTube or other RTMP server
-      `${rtmpUrl}/${streamKey}`,
+      // Output URL
+      `rtmp://a.rtmp.youtube.com/live2/w1h5-ur4u-z90e-t0z1-48k2`,
     ];
   }
 

@@ -149,6 +149,8 @@ export class StreamManager {
 
     try {
       session.lastHeartBeat = new Date();
+      console.log(`Writing data to stream session ${sessionId}, size: ${data.length} bytes`);
+      console.log(data);
       return session.ffmpegProcess.writeData(data);
     } catch (error) {
       console.error(`Error writing stream data for session ${sessionId}:`, error);

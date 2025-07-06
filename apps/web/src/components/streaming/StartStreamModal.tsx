@@ -2,28 +2,25 @@
 
 import { Button } from "@/components/ui/button";
 import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
-import { StreamInfo } from "@/types/streaming";
-import { CheckCircle, ExternalLink, Loader2, XCircle, Youtube } from "lucide-react";
+import { CheckCircle, Loader2, XCircle, Youtube } from "lucide-react";
 
-interface StreamCreationModalProps {
+interface StartStreamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onGoToStudio?: () => void;
+  onRetry?: () => void;
   isLoading: boolean;
   success: boolean;
   error: string | null;
-  broadcastData: StreamInfo | null;
 }
 
-export function StreamCreationModal({
+export function StartStreamModal({
   isOpen,
   onClose,
-  onGoToStudio,
+  onRetry,
   isLoading,
   success,
   error,
-  broadcastData,
-}: StreamCreationModalProps) {
+}: StartStreamModalProps) {
   const canClose = !isLoading;
 
   const handleClose = () => {
@@ -45,7 +42,7 @@ export function StreamCreationModal({
           <div className="p-2 bg-gradient-to-r from-red-500 to-purple-600 rounded-lg">
             <Youtube className="h-5 w-5 text-white" />
           </div>
-          <span>Create Live Stream</span>
+          <span>Going Live...</span>
         </div>
       </ModalHeader>
 
@@ -58,13 +55,13 @@ export function StreamCreationModal({
             <div className="space-y-2">
               <h3 className="text-xl font-semibold text-white">Creating your live stream...</h3>
               <p className="text-gray-400">
-                Setting up your broadcast on YouTube. This may take a few moments.
+                Setting things up for you. This may take a moment, please wait.
               </p>
             </div>
           </>
         )}
 
-        {success && broadcastData && (
+        {success && (
           <>
             <div className="flex justify-center">
               <div className="relative">
@@ -77,50 +74,7 @@ export function StreamCreationModal({
             <div className="space-y-4">
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold text-white">New live stream created!</h3>
-                <p className="text-gray-400">
-                  Your YouTube live stream has been successfully created and is ready to go.
-                </p>
-              </div>
-
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 space-y-3">
-                <div className="text-left space-y-1">
-                  <p className="text-sm font-medium text-gray-300">Stream Title</p>
-                  <p className="text-white font-semibold">{broadcastData.broadcast.title}</p>
-                </div>
-
-                <div className="text-left space-y-1">
-                  <p className="text-sm font-medium text-gray-300">Privacy</p>
-                  <p className="text-white capitalize">{broadcastData.broadcast.privacyStatus}</p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-gray-700">
-                  <span className="text-sm font-medium text-gray-300">Broadcast URL</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    asChild
-                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
-                  >
-                    <a
-                      href={broadcastData.broadcast.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center space-x-1"
-                    >
-                      <span className="text-xs">View on YouTube</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </Button>
-                </div>
-              </div>
-
-              <div className="text-xs text-gray-500 bg-gray-800/30 rounded-lg p-3">
-                <p className="font-medium mb-1">💡 Next Steps:</p>
-                <ul className="space-y-1 text-left">
-                  <li>• Configure your camera and microphone settings</li>
-                  <li>• Click &ldquo;Start Stream&rdquo; to begin broadcasting</li>
-                  <li>• Share your broadcast URL with viewers</li>
-                </ul>
+                <p className="text-gray-400">Your are now live on YouTube!</p>
               </div>
             </div>
           </>
@@ -134,9 +88,7 @@ export function StreamCreationModal({
             <div className="space-y-4">
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold text-white">Stream creation failed</h3>
-                <p className="text-gray-400">
-                  We encountered an error while creating your live stream.
-                </p>
+                <p className="text-gray-400">We encountered an error going live.</p>
               </div>
 
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
@@ -148,7 +100,7 @@ export function StreamCreationModal({
                 <ul className="space-y-1 text-left">
                   <li>• Check your internet connection</li>
                   <li>• Verify YouTube channel permissions</li>
-                  <li>• Ensure live streaming is enabled on your channel</li>
+                  <li>• Ensure a new broadcast was created successfully</li>
                   <li>• Try again in a few moments</li>
                 </ul>
               </div>
@@ -160,24 +112,16 @@ export function StreamCreationModal({
       {canClose && (
         <div className="p-6 border-t border-gray-700">
           <div className="flex justify-end space-x-3">
-            {success && onGoToStudio && (
-              <Button
-                variant="default"
-                onClick={onGoToStudio}
-                className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700"
-              >
-                Go to Studio
-              </Button>
-            )}
-            {success && !onGoToStudio && (
+            {success && (
               <Button
                 variant="default"
                 onClick={handleClose}
                 className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700"
               >
-                Continue to Stream Setup
+                Close
               </Button>
             )}
+
             {error && (
               <Button
                 variant="outline"

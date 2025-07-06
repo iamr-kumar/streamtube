@@ -84,7 +84,7 @@ export function useStream(serverUrl: string = "ws://localhost:8080") {
     }
   }, []);
 
-  const sendStreamData = useCallback((data: ArrayBuffer): void => {
+  const sendStreamData = useCallback((data: Blob): void => {
     if (streamClientRef.current) {
       streamClientRef.current.sendData(data);
     } else {
