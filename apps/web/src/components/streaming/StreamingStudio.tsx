@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { CreateBroadcastResponse, PrivacyStatus, StreamConfig } from "@/types/streaming";
+import axios from "axios";
 import {
   LogOut,
   Mic,
@@ -20,11 +22,9 @@ import {
   Youtube,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import StreamCanvas from "./StreamCanvas";
-import axios from "axios";
-import { PrivacyStatus, CreateBroadcastResponse } from "@/types/streaming";
+import { StreamCreationModal } from "./StreamCreationModal";
 
 interface StreamSettings {
   title: string;
@@ -34,7 +34,8 @@ interface StreamSettings {
 
 export default function StreamingStudio() {
   // const { data: session } = useSession();
-  const [isStreaming, setIsStreaming] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isStreaming, setIsStreaming] = useState(false); // TODO: Will be used when implementing actual streaming
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [micEnabled, setMicEnabled] = useState(false);
   const [screenEnabled, setScreenEnabled] = useState(false);
@@ -44,56 +45,73 @@ export default function StreamingStudio() {
     privacyStatus: PrivacyStatus.UNLISTED, // Default to unlisted
   });
 
-  const wsRef = useRef<WebSocket | null>(null);
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalSuccess, setModalSuccess] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [broadcastData, setBroadcastData] = useState<CreateBroadcastResponse | null>(null);
 
-  useEffect(() => {
-    // Initialize WebSocket connection to backend
-    const connectWebSocket = () => {
-      wsRef.current = new WebSocket("ws://localhost:8080");
+  // Reset modal state when opening
+  const openModal = () => {
+    setShowModal(true);
+    setModalLoading(false);
+    setModalSuccess(false);
+    setModalError(null);
+    setBroadcastData(null);
+  };
 
-      wsRef.current.onopen = () => {
-        console.log("Connected to streaming server");
-      };
+  const closeModal = () => {
+    setShowModal(false);
+    setModalLoading(false);
+    setModalSuccess(false);
+    setModalError(null);
+    setBroadcastData(null);
+  };
 
-      wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        toast.error("Failed to connect to streaming server");
-      };
+  // const {
+  //   connect,
+  //   configureStream,
+  //   disconnect,
+  //   startStream: startStreamClient,
+  //   stopStream: stopStreamClient,
+  //   sendStreamData,
+  // } = useStream();
 
-      wsRef.current.onclose = () => {
-        console.log("Disconnected from streaming server");
-        // Attempt to reconnect after 3 seconds
-        setTimeout(connectWebSocket, 3000);
-      };
-    };
+  // useEffect(() => {
+  //   // Initialize WebSocket connection to backend
+  //   const connectWebSocket = () => {
+  //     connect().catch((error) => {
+  //       console.error("WebSocket connection error:", error);
+  //     });
+  //   };
 
-    connectWebSocket();
+  //   connectWebSocket();
 
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, []);
+  //   return () => {
+  //     disconnect();
+  //   };
+  // }, [connect, disconnect]);
 
   // Replace the current startStream function with this improved version
 
   const startStream = async () => {
     // Form validation
     if (!streamSettings.title.trim()) {
-      toast.error("Please enter a stream title");
+      setModalError("Please enter a stream title");
       return;
     }
 
     if (!streamSettings.description.trim()) {
-      toast.error("Please enter a stream description");
+      setModalError("Please enter a stream description");
       return;
     }
 
-    try {
-      // Show loading state
-      toast.loading("Creating your stream...");
+    // Open modal and start loading
+    openModal();
+    setModalLoading(true);
 
+    try {
       // Create YouTube live stream
       const response = await axios.post("/api/youtube/create-stream", {
         title: streamSettings.title,
@@ -104,33 +122,31 @@ export default function StreamingStudio() {
       const { success, broadcast, stream } = response.data as CreateBroadcastResponse;
       console.log("API Response:", response.data);
 
-      // Remove loading toast
-      toast.dismiss();
-
       if (!success) {
         throw new Error("Failed to create stream");
       }
 
       console.log("Stream created:", broadcast, stream);
-      setIsStreaming(true);
 
-      // Show success message with YouTube URL
-      toast.success(
-        <div className="space-y-2">
-          <p>Stream started successfully!</p>
-          <a
-            href={broadcast.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs bg-white/10 px-2 py-1 rounded hover:bg-white/20 transition-colors block text-center"
-          >
-            Open YouTube Stream
-          </a>
-        </div>,
-        { duration: 6000 }
-      );
+      // Update modal state for success
+      setModalLoading(false);
+      setModalSuccess(true);
+      setBroadcastData(response.data);
+
+      const streamConfig: StreamConfig = {
+        rtmpUrl: stream.rtmpUrl,
+        streamKey: stream.streamKey,
+        resolution: { width: 1920, height: 1080 },
+        frameRate: 30,
+        bitrate: 2500,
+        audioSampleRate: 44100,
+        audioChannels: 2,
+      };
+
+      // // Store config for later use when actually starting the stream
+      console.log("Stream configuration ready:", streamConfig);
     } catch (error) {
-      toast.dismiss(); // Remove loading toast if present
+      setModalLoading(false);
 
       // Type narrowing for Axios errors
       if (axios.isAxiosError(error)) {
@@ -139,47 +155,33 @@ export default function StreamingStudio() {
 
         // Handle different error status codes
         if (statusCode === 401) {
-          toast.error("Authentication failed. Please sign in again.", {
-            action: {
-              label: "Sign In",
-              onClick: () => signOut({ callbackUrl: "/auth/signin" }),
-            },
-          });
+          setModalError("Authentication failed. Please sign in again.");
         } else if (statusCode === 403) {
-          toast.error(
-            "YouTube access denied. Make sure live streaming is enabled on your channel.",
-            { duration: 5000 }
-          );
+          setModalError("Permission denied. Please check your YouTube channel permissions.");
         } else if (statusCode === 400) {
-          toast.error(`Invalid stream settings: ${errorMessage}`, { duration: 5000 });
+          setModalError("Invalid request. Please check your stream settings.");
         } else if (statusCode === 429) {
-          toast.error("YouTube API quota exceeded. Please try again later.", { duration: 5000 });
+          setModalError("Too many requests. Please try again later.");
         } else {
-          // Generic error with details
-          toast.error(`Failed to start stream: ${errorMessage}`, { duration: 5000 });
+          setModalError(`Failed to create stream: ${errorMessage}`);
         }
       } else {
         // Handle non-Axios errors
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        toast.error(`Failed to start stream: ${errorMessage}`, { duration: 5000 });
+        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+        setModalError(`Failed to create stream: ${errorMessage}`);
       }
 
       console.error("Error starting stream:", error);
     }
   };
 
-  const stopStream = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "stop-stream",
-        })
-      );
-    }
+  // const stopStream = () => {
+  //   if (stopStreamClient()) {
+  //     setIsStreaming(false);
+  //   }
 
-    setIsStreaming(false);
-    toast.success("Stream stopped");
-  };
+  //   setIsStreaming(false);
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -234,10 +236,9 @@ export default function StreamingStudio() {
                 cameraEnabled={cameraEnabled}
                 screenEnabled={screenEnabled}
                 micEnabled={micEnabled}
-                onStreamData={(data) => {
-                  if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                    wsRef.current.send(data);
-                  }
+                onStreamData={() => {
+                  // TODO: Send stream data to WebSocket server
+                  // sendStreamData(data);
                 }}
               />
             </CardContent>
@@ -442,12 +443,12 @@ export default function StreamingStudio() {
               <Separator className="bg-white/10" />
               <div className="space-y-4">
                 <Button
-                  onClick={isStreaming ? stopStream : startStream}
-                  // disabled={!streamSettings.title.trim()}
+                  onClick={startStream}
+                  disabled={!streamSettings.title.trim() || !streamSettings.description.trim()}
                   className={`w-full py-3 text-lg font-semibold rounded-xl transition-all duration-300 ${
                     isStreaming
                       ? "bg-red-600 hover:bg-red-700 text-white"
-                      : "bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white"
+                      : "bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   }`}
                 >
                   {isStreaming ? (
@@ -509,6 +510,16 @@ export default function StreamingStudio() {
           </Card>
         </div>
       </div>
+
+      {/* Stream Creation Modal */}
+      <StreamCreationModal
+        isOpen={showModal}
+        onClose={closeModal}
+        isLoading={modalLoading}
+        success={modalSuccess}
+        error={modalError}
+        broadcastData={broadcastData}
+      />
     </div>
   );
 }

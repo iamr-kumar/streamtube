@@ -210,7 +210,7 @@ export class StreamManager {
    * Gets all active stream sessions.
    * @returns An array of all active stream sessions.
    */
-  public getActivStreams(): StreamSession[] {
+  public getActiveStreams(): StreamSession[] {
     return Array.from(this.sessions.values()).filter((session) => session.isActive);
   }
 
