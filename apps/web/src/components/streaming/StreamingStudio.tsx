@@ -70,7 +70,7 @@ export default function StreamingStudio() {
       });
     };
 
-    connectWebSocket();
+    //   connectWebSocket();
 
     return () => {
       disconnect();
@@ -275,7 +275,7 @@ export default function StreamingStudio() {
                   className={`w-full py-3 text-lg font-semibold rounded-xl transition-all duration-300 ${
                     isStreaming
                       ? "bg-red-600 hover:bg-red-700 text-white"
-                      : "bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white"
+                      : "bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   }`}
                 >
                   {isStreaming ? (
