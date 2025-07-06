@@ -249,7 +249,7 @@ export class FfmpegManager {
       "1", // Report stats every second
 
       // Output URL
-      `rtmp://a.rtmp.youtube.com/live2/w1h5-ur4u-z90e-t0z1-48k2`,
+      `rtmp://a.rtmp.youtube.com/live2/`,
     ];
   }
 
