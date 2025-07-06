@@ -15,7 +15,7 @@ export default function SignInPage() {
     const checkSession = async () => {
       const session = await getSession();
       if (session) {
-        router.push("/studio");
+        router.push("/dashboard");
       }
     };
     checkSession();

@@ -8,6 +8,7 @@ import { CheckCircle, ExternalLink, Loader2, XCircle, Youtube } from "lucide-rea
 interface StreamCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onGoToStudio?: () => void;
   isLoading: boolean;
   success: boolean;
   error: string | null;
@@ -17,6 +18,7 @@ interface StreamCreationModalProps {
 export function StreamCreationModal({
   isOpen,
   onClose,
+  onGoToStudio,
   isLoading,
   success,
   error,
@@ -158,7 +160,16 @@ export function StreamCreationModal({
       {canClose && (
         <div className="p-6 border-t border-gray-700">
           <div className="flex justify-end space-x-3">
-            {success && (
+            {success && onGoToStudio && (
+              <Button
+                variant="default"
+                onClick={onGoToStudio}
+                className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700"
+              >
+                Go to Studio
+              </Button>
+            )}
+            {success && !onGoToStudio && (
               <Button
                 variant="default"
                 onClick={handleClose}

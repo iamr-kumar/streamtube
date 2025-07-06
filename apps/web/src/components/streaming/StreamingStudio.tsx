@@ -2,11 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { CreateBroadcastResponse, PrivacyStatus, StreamConfig } from "@/types/streaming";
-import axios from "axios";
+import { StreamConfig } from "@/types/streaming";
 import {
   LogOut,
   Mic,
@@ -14,174 +11,73 @@ import {
   Monitor,
   MonitorOff,
   Play,
-  Settings,
   Square,
   User,
   Video,
   VideoOff,
   Youtube,
+  Home,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import StreamCanvas from "./StreamCanvas";
-import { StreamCreationModal } from "./StreamCreationModal";
-
-interface StreamSettings {
-  title: string;
-  description: string;
-  privacyStatus: PrivacyStatus;
-}
+import { useStream } from "@/hooks/useStream";
 
 export default function StreamingStudio() {
-  // const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isStreaming, setIsStreaming] = useState(false); // TODO: Will be used when implementing actual streaming
+  const router = useRouter();
+  const [isStreaming, setIsStreaming] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [micEnabled, setMicEnabled] = useState(false);
   const [screenEnabled, setScreenEnabled] = useState(false);
-  const [streamSettings, setStreamSettings] = useState<StreamSettings>({
-    title: "",
-    description: "",
-    privacyStatus: PrivacyStatus.UNLISTED, // Default to unlisted
-  });
 
-  // Modal state
-  const [showModal, setShowModal] = useState(false);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [modalSuccess, setModalSuccess] = useState(false);
-  const [modalError, setModalError] = useState<string | null>(null);
-  const [broadcastData, setBroadcastData] = useState<CreateBroadcastResponse | null>(null);
+  const {
+    connect,
+    configureStream,
+    disconnect,
+    startStream: startStreamClient,
+    stopStream: stopStreamClient,
+  } = useStream();
 
-  // Reset modal state when opening
-  const openModal = () => {
-    setShowModal(true);
-    setModalLoading(false);
-    setModalSuccess(false);
-    setModalError(null);
-    setBroadcastData(null);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setModalLoading(false);
-    setModalSuccess(false);
-    setModalError(null);
-    setBroadcastData(null);
-  };
-
-  // const {
-  //   connect,
-  //   configureStream,
-  //   disconnect,
-  //   startStream: startStreamClient,
-  //   stopStream: stopStreamClient,
-  //   sendStreamData,
-  // } = useStream();
-
-  // useEffect(() => {
-  //   // Initialize WebSocket connection to backend
-  //   const connectWebSocket = () => {
-  //     connect().catch((error) => {
-  //       console.error("WebSocket connection error:", error);
-  //     });
-  //   };
-
-  //   connectWebSocket();
-
-  //   return () => {
-  //     disconnect();
-  //   };
-  // }, [connect, disconnect]);
-
-  // Replace the current startStream function with this improved version
-
-  const startStream = async () => {
-    // Form validation
-    if (!streamSettings.title.trim()) {
-      setModalError("Please enter a stream title");
-      return;
-    }
-
-    if (!streamSettings.description.trim()) {
-      setModalError("Please enter a stream description");
-      return;
-    }
-
-    // Open modal and start loading
-    openModal();
-    setModalLoading(true);
-
-    try {
-      // Create YouTube live stream
-      const response = await axios.post("/api/youtube/create-stream", {
-        title: streamSettings.title,
-        description: streamSettings.description,
-        privacyStatus: streamSettings.privacyStatus,
+  useEffect(() => {
+    // Initialize WebSocket connection to backend
+    const connectWebSocket = () => {
+      connect().catch((error) => {
+        console.error("WebSocket connection error:", error);
       });
+    };
 
-      const { success, broadcast, stream } = response.data as CreateBroadcastResponse;
-      console.log("API Response:", response.data);
+    connectWebSocket();
 
-      if (!success) {
-        throw new Error("Failed to create stream");
-      }
+    return () => {
+      disconnect();
+    };
+  }, [connect, disconnect]);
 
-      console.log("Stream created:", broadcast, stream);
+  const startStream = () => {
+    // TODO: Implement actual streaming logic
+    // This would typically involve configuring the stream with existing broadcast data
+    const streamConfig: StreamConfig = {
+      rtmpUrl: "rtmp://example.com/live", // This should come from created broadcast
+      streamKey: "stream-key", // This should come from created broadcast
+      resolution: { width: 1920, height: 1080 },
+      frameRate: 30,
+      bitrate: 2500,
+      audioSampleRate: 44100,
+      audioChannels: 2,
+    };
 
-      // Update modal state for success
-      setModalLoading(false);
-      setModalSuccess(true);
-      setBroadcastData(response.data);
-
-      const streamConfig: StreamConfig = {
-        rtmpUrl: stream.rtmpUrl,
-        streamKey: stream.streamKey,
-        resolution: { width: 1920, height: 1080 },
-        frameRate: 30,
-        bitrate: 2500,
-        audioSampleRate: 44100,
-        audioChannels: 2,
-      };
-
-      // // Store config for later use when actually starting the stream
-      console.log("Stream configuration ready:", streamConfig);
-    } catch (error) {
-      setModalLoading(false);
-
-      // Type narrowing for Axios errors
-      if (axios.isAxiosError(error)) {
-        const statusCode = error.response?.status;
-        const errorMessage = error.response?.data?.error || error.message;
-
-        // Handle different error status codes
-        if (statusCode === 401) {
-          setModalError("Authentication failed. Please sign in again.");
-        } else if (statusCode === 403) {
-          setModalError("Permission denied. Please check your YouTube channel permissions.");
-        } else if (statusCode === 400) {
-          setModalError("Invalid request. Please check your stream settings.");
-        } else if (statusCode === 429) {
-          setModalError("Too many requests. Please try again later.");
-        } else {
-          setModalError(`Failed to create stream: ${errorMessage}`);
-        }
-      } else {
-        // Handle non-Axios errors
-        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-        setModalError(`Failed to create stream: ${errorMessage}`);
-      }
-
-      console.error("Error starting stream:", error);
+    if (configureStream(streamConfig) && startStreamClient()) {
+      setIsStreaming(true);
     }
   };
 
-  // const stopStream = () => {
-  //   if (stopStreamClient()) {
-  //     setIsStreaming(false);
-  //   }
-
-  //   setIsStreaming(false);
-  // };
+  const stopStream = () => {
+    if (stopStreamClient()) {
+      setIsStreaming(false);
+    }
+    setIsStreaming(false);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -204,6 +100,15 @@ export default function StreamingStudio() {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => router.push("/dashboard")}
+                className="text-gray-300 hover:text-white hover:bg-white/10"
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => signOut()}
                 className="text-gray-300 hover:text-white hover:bg-white/10"
               >
@@ -215,9 +120,9 @@ export default function StreamingStudio() {
         </div>
       </header>
 
-      <div className="max-w-9xl mx-auto p-6 grid lg:grid-cols-3 gap-6 px-12 lg:px-48">
+      <div className="max-w-7xl mx-auto p-6 grid lg:grid-cols-4 gap-6">
         {/* Main Canvas Area */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
           <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-white flex items-center space-x-2">
@@ -237,8 +142,7 @@ export default function StreamingStudio() {
                 screenEnabled={screenEnabled}
                 micEnabled={micEnabled}
                 onStreamData={() => {
-                  // TODO: Send stream data to WebSocket server
-                  // sendStreamData(data);
+                  // TODO: Send stream data to WebSocket server when streaming starts
                 }}
               />
             </CardContent>
@@ -307,148 +211,24 @@ export default function StreamingStudio() {
           </Card>
         </div>
 
-        {/* Settings Panel */}
+        {/* Controls Panel */}
         <div className="space-y-6">
-          {/* Stream Settings */}
+          {/* Stream Controls */}
           <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-white flex items-center space-x-2">
-                <Settings className="h-5 w-5" />
-                <span>Stream Settings</span>
-              </CardTitle>
+              <CardTitle className="text-white">Stream Controls</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-gray-300">
-                  Stream Title
-                </Label>
-                <Input
-                  id="title"
-                  value={streamSettings.title}
-                  onChange={(e) =>
-                    setStreamSettings((prev) => ({ ...prev, title: e.target.value }))
-                  }
-                  placeholder="Enter stream title..."
-                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-gray-300">
-                  Description
-                </Label>
-                <textarea
-                  id="description"
-                  value={streamSettings.description}
-                  onChange={(e) =>
-                    setStreamSettings((prev) => ({ ...prev, description: e.target.value }))
-                  }
-                  placeholder="Stream description..."
-                  rows={3}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-md text-white placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-gray-300">Privacy Settings</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <div
-                    className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
-                      streamSettings.privacyStatus === PrivacyStatus.UNLISTED
-                        ? "bg-purple-900/50 border-purple-500"
-                        : "bg-white/5 border-white/10 hover:bg-white/10"
-                    }`}
-                    onClick={() =>
-                      setStreamSettings((prev) => ({
-                        ...prev,
-                        privacyStatus: PrivacyStatus.UNLISTED,
-                      }))
-                    }
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full mb-2 border-2 flex items-center justify-center ${
-                        streamSettings.privacyStatus === PrivacyStatus.UNLISTED
-                          ? "border-purple-500"
-                          : "border-white/30"
-                      }`}
-                    >
-                      {streamSettings.privacyStatus === PrivacyStatus.UNLISTED && (
-                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      )}
-                    </div>
-                    <span className="text-sm text-white font-medium">Unlisted</span>
-                    <span className="text-xs text-gray-400 text-center mt-1">
-                      Visible with link only
-                    </span>
-                  </div>
-
-                  <div
-                    className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
-                      streamSettings.privacyStatus === PrivacyStatus.PRIVATE
-                        ? "bg-purple-900/50 border-purple-500"
-                        : "bg-white/5 border-white/10 hover:bg-white/10"
-                    }`}
-                    onClick={() =>
-                      setStreamSettings((prev) => ({
-                        ...prev,
-                        privacyStatus: PrivacyStatus.PRIVATE,
-                      }))
-                    }
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full mb-2 border-2 flex items-center justify-center ${
-                        streamSettings.privacyStatus === PrivacyStatus.PRIVATE
-                          ? "border-purple-500"
-                          : "border-white/30"
-                      }`}
-                    >
-                      {streamSettings.privacyStatus === PrivacyStatus.PRIVATE && (
-                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      )}
-                    </div>
-                    <span className="text-sm text-white font-medium">Private</span>
-                    <span className="text-xs text-gray-400 text-center mt-1">
-                      Only you can view
-                    </span>
-                  </div>
-
-                  <div
-                    className={`flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all ${
-                      streamSettings.privacyStatus === PrivacyStatus.PUBLIC
-                        ? "bg-purple-900/50 border-purple-500"
-                        : "bg-white/5 border-white/10 hover:bg-white/10"
-                    }`}
-                    onClick={() =>
-                      setStreamSettings((prev) => ({
-                        ...prev,
-                        privacyStatus: PrivacyStatus.PUBLIC,
-                      }))
-                    }
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full mb-2 border-2 flex items-center justify-center ${
-                        streamSettings.privacyStatus === PrivacyStatus.PUBLIC
-                          ? "border-purple-500"
-                          : "border-white/30"
-                      }`}
-                    >
-                      {streamSettings.privacyStatus === PrivacyStatus.PUBLIC && (
-                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      )}
-                    </div>
-                    <span className="text-sm text-white font-medium">Public</span>
-                    <span className="text-xs text-gray-400 text-center mt-1">Anyone can find</span>
-                  </div>
+              <div className="text-center space-y-4">
+                <div className="text-sm text-gray-400">
+                  {isStreaming ? "Stream is live!" : "Ready to stream"}
                 </div>
-              </div>
-              <Separator className="bg-white/10" />
-              <div className="space-y-4">
                 <Button
-                  onClick={startStream}
-                  disabled={!streamSettings.title.trim() || !streamSettings.description.trim()}
+                  onClick={isStreaming ? stopStream : startStream}
                   className={`w-full py-3 text-lg font-semibold rounded-xl transition-all duration-300 ${
                     isStreaming
                       ? "bg-red-600 hover:bg-red-700 text-white"
-                      : "bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      : "bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white"
                   }`}
                 >
                   {isStreaming ? (
@@ -463,6 +243,11 @@ export default function StreamingStudio() {
                     </>
                   )}
                 </Button>
+                {!isStreaming && (
+                  <div className="text-xs text-gray-500 text-center">
+                    Make sure to create a stream from the dashboard first
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -508,18 +293,34 @@ export default function StreamingStudio() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Quick Actions */}
+          <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-white">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/dashboard")}
+                className="w-full border-white/10 hover:bg-white/10 text-white"
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full border-white/10 hover:bg-white/10 text-white"
+                disabled
+              >
+                <Monitor className="h-4 w-4 mr-2" />
+                Stream Settings
+                <span className="text-xs text-gray-400 ml-auto">(Soon)</span>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      {/* Stream Creation Modal */}
-      <StreamCreationModal
-        isOpen={showModal}
-        onClose={closeModal}
-        isLoading={modalLoading}
-        success={modalSuccess}
-        error={modalError}
-        broadcastData={broadcastData}
-      />
     </div>
   );
 }
