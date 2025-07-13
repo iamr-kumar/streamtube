@@ -1,0 +1,28 @@
+{
+  "name": "streamtube",
+  "version": "1.0.0",
+  "description": "StreamTube monorepo with Next.js web app and Express WebSocket server",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:streamer": "pnpm --filter streamer dev",
+    "build": "pnpm run --recursive build",
+    "build:web": "pnpm --filter web build",
+    "build:streamer": "pnpm --filter streamer build",
+    "start": "pnpm run --parallel start",
+    "start:web": "pnpm --filter web start",
+    "start:streamer": "pnpm --filter streamer start",
+    "lint": "pnpm run --recursive lint",
+    "type-check": "pnpm run --recursive type-check"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.6"
+}
