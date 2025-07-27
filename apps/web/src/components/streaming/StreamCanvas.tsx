@@ -7,8 +7,7 @@ interface StreamCanvasProps {
   cameraEnabled: boolean;
   screenEnabled: boolean;
   micEnabled: boolean;
-  webSocketRef: React.RefObject<WebSocket | null>;
-  onStreamData?: (data: Blob) => void;
+  onStreamData: (data: Blob) => void;
 }
 
 export default function StreamCanvas({
@@ -17,7 +16,6 @@ export default function StreamCanvas({
   screenEnabled,
   micEnabled,
   onStreamData,
-  webSocketRef,
 }: StreamCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -305,8 +303,8 @@ export default function StreamCanvas({
         let chunkCount = 0;
 
         recorder.ondataavailable = (event) => {
-          if (event.data.size > 0 && isStreaming && webSocketRef.current) {
-            webSocketRef.current.send(event.data);
+          if (event.data.size > 0 && isStreaming) {
+            onStreamData(event.data);
           }
         };
 
