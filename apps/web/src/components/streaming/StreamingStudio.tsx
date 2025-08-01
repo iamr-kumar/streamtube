@@ -23,13 +23,17 @@ import { signOut } from "next-auth/react";
 import router from "next/router";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 import { StartStreamModal } from "./StartStreamModal";
+import { StreamConfig, StreamInfo, StreamStatus } from "@/types/streaming";
+import axios from "axios";
 
 export default function StreamingStudio() {
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
   const [screenEnabled, setScreenEnabled] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const { connect, sendData } = useStream();
+  const [streamInfo, setStreamInfo] = useState<StreamInfo | null>(null);
+  const { status, connect, sendData, configureStream, disconnect, startStream, stopStream } =
+    useStream();
 
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
@@ -51,21 +55,94 @@ export default function StreamingStudio() {
   };
 
   useEffect(() => {
-    connect();
+    const connectToWebSocket = () => {
+      connect().catch((error) => {
+        console.error("Error connecting to WebSocket:", error);
+      });
+    };
+
+    connectToWebSocket();
   }, []);
+
+  useEffect(() => {
+    const activeStream = localStorage.getItem("activeStream");
+    if (activeStream) {
+      const streamData: StreamInfo = JSON.parse(activeStream);
+      setStreamInfo(streamData);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showModal && modalLoading && status === StreamStatus.STREAMING) {
+      setModalLoading(false);
+      setModalSuccess(true);
+      setModalError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   const sendDataOverWebSocket = (data: Blob) => {
     sendData(data);
   };
 
-  const startStream = () => {
-    setIsStreaming(true);
-    // openModal();
+  const handleStartStream = async () => {
+    if (!streamInfo) {
+      console.error("No active stream found");
+      return;
+    }
+
+    const streamConfig: StreamConfig = {
+      rtmpUrl: streamInfo.stream.rtmpUrl,
+      streamKey: streamInfo.stream.streamKey,
+      resolution: { width: 1280, height: 720 },
+      frameRate: 25,
+      bitrate: 2500,
+      audioSampleRate: 44100,
+      audioChannels: 2,
+    };
+    openModal();
+    setModalLoading(true);
+    try {
+      if (configureStream(streamConfig) && startStream()) {
+        const transitionSuccess = true;
+        if (transitionSuccess) {
+          setIsStreaming(true);
+          setModalLoading(false);
+          setModalSuccess(true);
+        } else {
+          throw new Error("Failed to transition broadcast to live");
+        }
+      } else {
+        throw new Error("Failed to configure or start stream");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        setModalError(error.message);
+      } else {
+        setModalError(String(error));
+      }
+      setModalLoading(false);
+    }
   };
 
-  const stopStream = () => {
-    setIsStreaming(false);
-    // closeModal();
+  const transitionBroadcastToLive = async (): Promise<boolean> => {
+    try {
+      const response = await axios.post("/api/youtube/transition-stream", {
+        broadcastId: streamInfo?.broadcast.id,
+      });
+      if (response.data.success) {
+        return true;
+      }
+    } catch (error) {
+      console.error("Error transitioning broadcast:", error);
+    }
+    return false;
+  };
+
+  const handleStopStream = () => {
+    if (stopStream()) {
+      setIsStreaming(false);
+    }
   };
 
   return (
@@ -214,7 +291,7 @@ export default function StreamingStudio() {
                   {isStreaming ? "Stream is live!" : "Ready to stream"}
                 </div>
                 <Button
-                  onClick={isStreaming ? stopStream : startStream}
+                  onClick={isStreaming ? handleStopStream : handleStartStream}
                   className={`w-full py-3 text-lg font-semibold rounded-xl transition-all duration-300 ${
                     isStreaming
                       ? "bg-red-600 hover:bg-red-700 text-white"

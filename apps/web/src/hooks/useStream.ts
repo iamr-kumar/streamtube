@@ -1,16 +1,27 @@
 import { StreamingClient } from "@/lib/StreamingClient";
-import { StreamServerCallbacks, StreamStatus } from "@/types/streaming";
+import { StreamConfig, StreamServerCallbacks, StreamStatus } from "@/types/streaming";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useStream(url: string = "ws://localhost:8080") {
   const [status, setStatus] = useState<StreamStatus>(StreamStatus.DISCONNECTED);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const streamClientRef = useRef<StreamingClient | null>(null);
 
   const callbacks: StreamServerCallbacks = {
     onConnected: () => {
       setStatus(StreamStatus.CONNECTED);
       console.log("WebSocket connected");
+      setError(null);
+    },
+    onStreamStarted: () => {
+      setStatus(StreamStatus.STREAMING);
+      setError(null);
+    },
+    onConfigUpdate: (sessionId, config) => {
+      setSessionId(sessionId);
+      setError(null);
+      console.log("Stream configuration updated:", config);
     },
     onDisconnected: () => {
       setStatus(StreamStatus.DISCONNECTED);
@@ -38,6 +49,42 @@ export function useStream(url: string = "ws://localhost:8080") {
     }
   }, []);
 
+  const disconnect = useCallback((): void => {
+    if (streamClientRef.current) {
+      streamClientRef.current.disconnect();
+      setSessionId(null);
+      setStatus(StreamStatus.DISCONNECTED);
+      console.log("WebSocket disconnected");
+    }
+  }, []);
+
+  const configureStream = useCallback((config: StreamConfig) => {
+    if (streamClientRef.current) {
+      return streamClientRef.current.configureStream(config);
+    } else {
+      console.error("Streaming client is not initialized");
+      return false;
+    }
+  }, []);
+
+  const startStream = useCallback(() => {
+    if (streamClientRef.current) {
+      return streamClientRef.current.startStream();
+    } else {
+      console.error("Streaming client is not initialized");
+      return false;
+    }
+  }, []);
+
+  const stopStream = useCallback(() => {
+    if (streamClientRef.current) {
+      return streamClientRef.current.stopStream();
+    } else {
+      console.error("Streaming client is not initialized");
+      return false;
+    }
+  }, []);
+
   const sendData = useCallback((data: Blob) => {
     if (!streamClientRef.current) {
       console.error("Streaming client is not initialized");
@@ -53,7 +100,12 @@ export function useStream(url: string = "ws://localhost:8080") {
   return {
     status,
     sessionId,
+    error,
     connect,
+    configureStream,
+    startStream,
+    stopStream,
+    disconnect,
     sendData,
   };
 }
