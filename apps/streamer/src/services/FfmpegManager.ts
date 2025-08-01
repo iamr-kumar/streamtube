@@ -175,7 +175,7 @@ export class FfmpegManager {
       "44100",
       "-f",
       "flv",
-      "rtmp://a.rtmp.youtube.com/live2/61yg-chav-0y7b-bqzw-0rwm",
+      `${rtmpUrl}/${streamKey}`,
     ];
   }
 

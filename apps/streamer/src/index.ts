@@ -52,20 +52,20 @@ app.get("/streams", (req, res) => {
 });
 
 wss.on("connection", (ws: WsWebSocket, request) => {
-  const streamConfig: StreamConfig = {
-    rtmpUrl: "rtmp://example.com/live",
-    streamKey: "stream-key",
-    resolution: {
-      width: 1280,
-      height: 720,
-    },
-    frameRate: 30,
-    bitrate: 2500,
-    audioSampleRate: 44100,
-    audioChannels: 2,
-  };
-  const sessionId = streamManager.createSession(ws, streamConfig);
-  streamManager.startStream(sessionId);
+  // const streamConfig: StreamConfig = {
+  //   rtmpUrl: "rtmp://example.com/live",
+  //   streamKey: "stream-key",
+  //   resolution: {
+  //     width: 1280,
+  //     height: 720,
+  //   },
+  //   frameRate: 30,
+  //   bitrate: 2500,
+  //   audioSampleRate: 44100,
+  //   audioChannels: 2,
+  // };
+  // const sessionId = streamManager.createSession(ws, streamConfig);
+  // streamManager.startStream(sessionId);
   ws.send(
     JSON.stringify({
       type: "connection",
@@ -77,37 +77,32 @@ wss.on("connection", (ws: WsWebSocket, request) => {
   );
 
   ws.on("message", async (data: Buffer) => {
-    // const messageStr = data.toString();
-    // let message: WebSocketMessage;
+    const messageStr = data.toString();
+    let message: WebSocketMessage;
 
-    // try {
-    //   message = JSON.parse(messageStr);
-    //   console.log("Received message:", message);
-    // } catch (error) {
-    //   // treat as binary data if parsing fails
-    //   // console.error("Failed to parse message as JSON, treating as binary data:", error);
-    //   handleBinaryData(ws, data);
-    //   return;
-    // }
-    // switch (message.type) {
-    //   case "stream-config":
-    //     await handleStreamConfig(ws, message);
-    //     break;
-    //   case "stream-start":
-    //     await handleStreamStart(ws, message);
-    //     break;
-    //   case "stream-stop":
-    //     await handleStreamStop(ws, message);
-    //     break;
-    //   default:
-    //     console.warn(`Unknown message type: ${message.type}`);
-    //     sendError(ws, "Unknown message type");
-    // }
-
-    // Create session
-    console.log(`Received binary data for session ${sessionId}`);
-    console.log(data);
-    handleBinaryData(ws, data);
+    try {
+      message = JSON.parse(messageStr);
+      console.log("Received message:", message);
+    } catch (error) {
+      // treat as binary data if parsing fails
+      // console.error("Failed to parse message as JSON, treating as binary data:", error);
+      handleBinaryData(ws, data);
+      return;
+    }
+    switch (message.type) {
+      case "stream-config":
+        await handleStreamConfig(ws, message);
+        break;
+      case "stream-start":
+        await handleStreamStart(ws, message);
+        break;
+      case "stream-stop":
+        await handleStreamStop(ws, message);
+        break;
+      default:
+        console.warn(`Unknown message type: ${message.type}`);
+        sendError(ws, "Unknown message type");
+    }
   });
 
   ws.on("close", () => {

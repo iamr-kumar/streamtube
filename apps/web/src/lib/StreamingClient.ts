@@ -1,4 +1,9 @@
-import { StreamServerCallbacks, StreamStatus } from "@/types/streaming";
+import {
+  StreamConfig,
+  StreamMessage,
+  StreamServerCallbacks,
+  StreamStatus,
+} from "@/types/streaming";
 
 export class StreamingClient {
   private webSocket: WebSocket | null = null;
@@ -58,6 +63,60 @@ export class StreamingClient {
     this.callbacks.onDisconnected?.();
   }
 
+  public configureStream(config: StreamConfig): boolean {
+    if (!this.isConnected()) {
+      console.error("Cannot configure stream - not connected");
+      return false;
+    }
+    try {
+      this.sendMessage({
+        type: "stream-config",
+        payload: { ...config },
+        timestamp: Date.now(),
+      });
+      return true;
+    } catch (error) {
+      console.error("Error configuring stream:", error);
+      return false;
+    }
+  }
+
+  public startStream(): boolean {
+    if (!this.isConnected()) {
+      console.error("Cannot start stream - not connected");
+      return false;
+    }
+    try {
+      this.sendMessage({
+        type: "stream-start",
+        payload: {},
+        timestamp: Date.now(),
+      });
+      return true;
+    } catch (error) {
+      console.error("Error starting stream:", error);
+      return false;
+    }
+  }
+
+  public stopStream(): boolean {
+    if (!this.isConnected()) {
+      console.error("Cannot stop stream - not connected");
+      return false;
+    }
+    try {
+      this.sendMessage({
+        type: "stream-stop",
+        payload: {},
+        timestamp: Date.now(),
+      });
+      return true;
+    } catch (error) {
+      console.error("Error stopping stream:", error);
+      return false;
+    }
+  }
+
   public sendData(data: Blob): void {
     if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) {
       console.error("WebSocket is not open. Cannot send data.");
@@ -68,5 +127,57 @@ export class StreamingClient {
     } catch (error) {
       console.error("Error sending data over WebSocket:", error);
     }
+  }
+
+  private handleMessage(data: string): void {
+    try {
+      const message: StreamMessage = JSON.parse(data);
+      switch (message.type) {
+        case "stream-config":
+          this.sessionId = message.sessionId || null;
+          this.status = StreamStatus.CONFIGURED;
+          this.callbacks.onConfigUpdate?.(
+            this.sessionId || "",
+            message.payload.config as StreamConfig
+          );
+          break;
+
+        case "stream-start":
+          this.status = StreamStatus.STREAMING;
+          this.callbacks.onStreamStarted?.(this.sessionId || "");
+          break;
+
+        case "stream-stop":
+          this.status = StreamStatus.CONNECTED;
+          this.callbacks.onStreamStopped?.(this.sessionId || "");
+          break;
+
+        case "stream-error":
+          this.status = StreamStatus.ERROR;
+          this.callbacks.onError?.(message.payload.error as string);
+          break;
+      }
+    } catch (error) {
+      console.error("Failed to parse message:", error);
+      this.callbacks.onError?.("Failed to parse message from server");
+    }
+  }
+
+  private sendMessage(message: Omit<StreamMessage, "sessionId">): void {
+    if (!this.isConnected()) {
+      console.error("Cannot send message - not connected");
+      return;
+    }
+
+    // isConnected ensures that webSocket is not null and readyState is OPEN
+    this.webSocket!.send(JSON.stringify(message));
+  }
+
+  private isConnected(): boolean {
+    return (
+      this.webSocket !== null &&
+      this.status !== StreamStatus.DISCONNECTED &&
+      this.webSocket.readyState === WebSocket.OPEN
+    );
   }
 }
