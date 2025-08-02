@@ -72,15 +72,6 @@ export default function StreamingStudio() {
     }
   }, []);
 
-  useEffect(() => {
-    if (showModal && modalLoading && status === StreamStatus.STREAMING) {
-      setModalLoading(false);
-      setModalSuccess(true);
-      setModalError(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
-
   const sendDataOverWebSocket = (data: Blob) => {
     sendData(data);
   };
@@ -110,9 +101,9 @@ export default function StreamingStudio() {
       // Start the stream
       await startStream();
       console.log("Stream started successfully");
+      setIsStreaming(true);
 
       // Start sending data and wait for YouTube stream to be ready
-      setIsStreaming(true);
       const streamIsReady = await waitForYouTubeStreamToBeReady();
 
       if (!streamIsReady) {
@@ -155,7 +146,7 @@ export default function StreamingStudio() {
         const response = await axios.get(
           `/api/youtube/ready-check?broadcastId=${streamInfo?.broadcast.id}`
         );
-        const { message, canGoLive } = response.data;
+        const { message, canGoLive, broadcastReady } = response.data;
 
         console.log("YouTube stream readiness check:", message);
 

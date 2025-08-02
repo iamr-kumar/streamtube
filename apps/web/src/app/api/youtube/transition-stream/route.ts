@@ -25,11 +25,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       auth: oauth2Client,
     });
 
-    await youtube.liveBroadcasts.transition({
+    const broadcast = await youtube.liveBroadcasts.list({
       part: ["status"],
-      broadcastStatus: "live",
+      id: [broadcastId],
+    });
+    const broadcastData = broadcast.data.items?.[0];
+    if (!broadcastData) {
+      return NextResponse.json({ error: "Broadcast not found" }, { status: 404 });
+    }
+    const currentStatus = broadcastData.status?.lifeCycleStatus;
+    let nextStatus = currentStatus === "testing" ? "live" : "testing";
+    let result = await youtube.liveBroadcasts.transition({
+      part: ["status"],
+      broadcastStatus: nextStatus,
       id: broadcastId,
     });
+
+    const newStatus = result.data.status?.lifeCycleStatus;
+    if (!newStatus) {
+      throw new Error(`Failed to transition broadcast ${broadcastId} to status ${nextStatus}`);
+    }
+    console.log(`Broadcast ${broadcastId} transitioned to ${newStatus}`);
+    // set timeout for 10 seconds and wait
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    if (nextStatus !== "live") {
+      nextStatus = "live";
+      result = await youtube.liveBroadcasts.transition({
+        part: ["status"],
+        broadcastStatus: nextStatus,
+        id: broadcastId,
+      });
+    }
+
+    console.log("Transition successful:");
 
     return NextResponse.json(
       { success: true, message: "Stream transitioned to live" },

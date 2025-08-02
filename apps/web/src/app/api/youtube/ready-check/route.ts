@@ -55,7 +55,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const broadcastReady = broadcastStatus === "ready";
+    const broadcastReady =
+      broadcastStatus === "ready" || broadcastStatus === "testing" || broadcastStatus === "live";
     const streamReady = streamActive && streamHealthy;
     const canGoLive = broadcastReady && streamReady;
 
@@ -69,6 +70,9 @@ export async function GET(request: NextRequest) {
     } else if (!streamHealthy) {
       message = "Stream quality issues";
     }
+
+    console.log(`Broadcast status: ${broadcastStatus}`);
+    console.log(`Stream active: ${streamActive}, Healthy: ${streamHealthy}`);
 
     return NextResponse.json({
       canGoLive,
