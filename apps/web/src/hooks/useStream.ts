@@ -20,6 +20,7 @@ export function useStream(url: string = "ws://localhost:8080") {
     },
     onConfigUpdate: (sessionId, config) => {
       setSessionId(sessionId);
+      setStatus(StreamStatus.CONFIGURED);
       setError(null);
       console.log("Stream configuration updated:", config);
     },
@@ -29,6 +30,7 @@ export function useStream(url: string = "ws://localhost:8080") {
     },
     onError: (error) => {
       setStatus(StreamStatus.ERROR);
+      setError(error);
       console.error("WebSocket error:", error);
     },
   };
@@ -58,30 +60,40 @@ export function useStream(url: string = "ws://localhost:8080") {
     }
   }, []);
 
-  const configureStream = useCallback((config: StreamConfig) => {
-    if (streamClientRef.current) {
-      return streamClientRef.current.configureStream(config);
-    } else {
-      console.error("Streaming client is not initialized");
-      return false;
+  const configureStream = useCallback(async (config: StreamConfig): Promise<string> => {
+    if (!streamClientRef.current) {
+      throw new Error("Streaming client is not initialized");
+    }
+    try {
+      const sessionId = await streamClientRef.current.configureStream(config);
+      return sessionId;
+    } catch (error) {
+      console.error("Error configuring stream:", error);
+      throw error;
     }
   }, []);
 
-  const startStream = useCallback(() => {
-    if (streamClientRef.current) {
-      return streamClientRef.current.startStream();
-    } else {
-      console.error("Streaming client is not initialized");
-      return false;
+  const startStream = useCallback(async (): Promise<void> => {
+    if (!streamClientRef.current) {
+      throw new Error("Streaming client is not initialized");
+    }
+    try {
+      await streamClientRef.current.startStream();
+    } catch (error) {
+      console.error("Error starting stream:", error);
+      throw error;
     }
   }, []);
 
-  const stopStream = useCallback(() => {
-    if (streamClientRef.current) {
-      return streamClientRef.current.stopStream();
-    } else {
-      console.error("Streaming client is not initialized");
-      return false;
+  const stopStream = useCallback(async (): Promise<void> => {
+    if (!streamClientRef.current) {
+      throw new Error("Streaming client is not initialized");
+    }
+    try {
+      await streamClientRef.current.stopStream();
+    } catch (error) {
+      console.error("Error stopping stream:", error);
+      throw error;
     }
   }, []);
 
