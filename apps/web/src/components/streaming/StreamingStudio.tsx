@@ -72,15 +72,6 @@ export default function StreamingStudio() {
     }
   }, []);
 
-  useEffect(() => {
-    if (showModal && modalLoading && status === StreamStatus.STREAMING) {
-      setModalLoading(false);
-      setModalSuccess(true);
-      setModalError(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
-
   const sendDataOverWebSocket = (data: Blob) => {
     sendData(data);
   };
@@ -103,26 +94,86 @@ export default function StreamingStudio() {
     openModal();
     setModalLoading(true);
     try {
-      if (configureStream(streamConfig) && startStream()) {
-        const transitionSuccess = true;
-        if (transitionSuccess) {
-          setIsStreaming(true);
-          setModalLoading(false);
-          setModalSuccess(true);
-        } else {
-          throw new Error("Failed to transition broadcast to live");
-        }
-      } else {
-        throw new Error("Failed to configure or start stream");
+      // Configure the stream
+      const sessionId = await configureStream(streamConfig);
+      console.log("Stream configured with session ID:", sessionId);
+
+      // Start the stream
+      await startStream();
+      console.log("Stream started successfully");
+      setIsStreaming(true);
+
+      // Start sending data and wait for YouTube stream to be ready
+      const streamIsReady = await waitForYouTubeStreamToBeReady();
+
+      if (!streamIsReady) {
+        throw new Error(
+          "YouTube stream is not ready. Please ensure your connection is stable and try again."
+        );
       }
+
+      const transitionSuccess = await transitionBroadcastToLive();
+      if (!transitionSuccess) {
+        throw new Error("Failed to transition broadcast to live.");
+      }
+
+      console.log("Broadcast transitioned to live successfully");
+      setModalLoading(false);
+      setModalSuccess(true);
     } catch (error) {
-      if (error instanceof Error) {
-        setModalError(error.message);
-      } else {
-        setModalError(String(error));
+      console.error("Error in stream start process:", error);
+
+      // Attempt to clean up on error
+      try {
+        await stopStream();
+      } catch (cleanupError) {
+        console.error("Error during cleanup:", cleanupError);
       }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setModalError(`Failed to start stream: ${errorMessage}`);
       setModalLoading(false);
     }
+  };
+
+  const waitForYouTubeStreamToBeReady = async (): Promise<boolean> => {
+    const maxWaitTime = 60000; // 60 seconds
+    const checkInterval = 3000; // 3 seconds
+    const maxAttempts = Math.ceil(maxWaitTime / checkInterval);
+
+    for (let attempt = 0; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await axios.get(
+          `/api/youtube/ready-check?broadcastId=${streamInfo?.broadcast.id}`
+        );
+        const { message, canGoLive, broadcastReady } = response.data;
+
+        console.log("YouTube stream readiness check:", message);
+
+        if (canGoLive) {
+          return true;
+        }
+
+        if (attempt < maxAttempts) {
+          console.log(`Waiting for YouTube stream to be ready... (${attempt + 1}/${maxAttempts})`);
+          await new Promise((resolve) => setTimeout(resolve, checkInterval));
+        }
+      } catch (error) {
+        console.error("Error checking YouTube stream readiness:", error);
+
+        // If attempts still remaining, wait and retry
+        if (attempt < maxAttempts && axios.isAxiosError(error)) {
+          console.log(`Retrying readiness check... (${attempt + 1}/${maxAttempts})`);
+          await new Promise((resolve) => setTimeout(resolve, checkInterval));
+          continue;
+        }
+
+        // Break if attempts exhausted or error is not recoverable
+        console.error("Failed to check YouTube stream readiness after multiple attempts.");
+        return false;
+      }
+    }
+    return false; // If we reach here, it means the stream is not ready
   };
 
   const transitionBroadcastToLive = async (): Promise<boolean> => {
@@ -139,9 +190,14 @@ export default function StreamingStudio() {
     return false;
   };
 
-  const handleStopStream = () => {
-    if (stopStream()) {
+  const handleStopStream = async () => {
+    try {
+      await stopStream();
       setIsStreaming(false);
+      console.log("Stream stopped successfully");
+      localStorage.removeItem("activeStream");
+    } catch (error) {
+      console.error("Error stopping stream:", error);
     }
   };
 

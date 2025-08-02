@@ -239,7 +239,7 @@ const sendError = (ws: WsWebSocket, message: string) => {
     try {
       ws.send(
         JSON.stringify({
-          type: "error",
+          type: "stream-error",
           payload: {
             message,
           },

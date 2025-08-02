@@ -123,10 +123,6 @@ export class StreamManager {
         session.ffmpegProcess = null;
       }
       session.isActive = false;
-      this.broadcastToSession(sessionId, {
-        type: "stream-data",
-        payload: { type: "stopped" },
-      });
       return true;
     } catch (error) {
       console.error(`Error stopping stream for session ${sessionId}:`, error);
