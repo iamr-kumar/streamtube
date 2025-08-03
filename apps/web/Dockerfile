@@ -4,8 +4,8 @@ FROM node:22.14.0-alpine
 # Set working directory
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm@8.15.6
+# Install pnpm and curl for health checks
+RUN apk add --no-cache curl && npm install -g pnpm@8.15.6
 
 # Copy package.json files and pnpm workspace config
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -31,8 +31,8 @@ RUN pnpm --filter web build
 EXPOSE 3001
 
 # Add healthcheck
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5 \
+    CMD curl -f http://127.0.0.1:3001 || exit 1
 
 # Start the server
 CMD ["pnpm", "--filter", "web", "start", "-p", "3001"]

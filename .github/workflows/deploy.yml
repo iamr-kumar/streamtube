@@ -1,0 +1,87 @@
+name: Deploy StreamTube to Azure VM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH with password authentication
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+      - name: Deploy to Azure VM
+        run: |
+          sshpass -p "${{ secrets.AZURE_SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.AZURE_SSH_USER }}@${{ secrets.AZURE_VM_IP }} << 'EOF'
+
+            echo "== Environment Info =="
+            whoami
+            pwd
+            date
+            echo "PATH: $PATH"
+            which git
+            which docker
+            which docker-compose || which docker compose
+
+            echo "== Fixing ownership on project folder =="
+            sudo chown -R $USER:$USER ~/projects/streamtube
+
+            echo "== Allowing project directory for Git =="
+            git config --global --add safe.directory /home/${USER}/projects/streamtube
+
+            echo "== Navigating to project =="
+            cd ~/projects/streamtube || { echo "Project folder missing! Creating..."; mkdir -p ~/projects && cd ~/projects && git clone https://github.com/iamr-kumar/streamtube.git && cd streamtube; }
+
+            echo "== Checking out main branch =="
+            git checkout main || { echo "Failed to checkout main"; exit 1; }
+
+            echo "== Pulling latest changes =="
+            git pull --no-rebase || { echo "Git pull failed"; exit 1; }
+
+            echo "== Stopping existing containers =="
+            sudo docker-compose down || true
+
+            echo "== Removing old streamtube images (optional cleanup) =="
+            sudo docker images | grep streamtube | awk '{print $3}' | xargs -r sudo docker rmi -f || true
+            sudo docker images | grep "streamtube-" | awk '{print $3}' | xargs -r sudo docker rmi -f || true
+
+            echo "== Building and starting services with Docker Compose =="
+            if ! sudo docker-compose up -d --build; then
+              echo "== Docker Compose logs: =="
+              sudo docker-compose logs
+              echo "== Container status: =="
+              sudo docker-compose ps
+              echo "== Docker Compose failed =="
+              exit 1
+            fi
+
+            echo "== Waiting for services to be ready =="
+            sleep 30
+
+            echo "== Checking service status =="
+            sudo docker-compose ps
+
+            echo "== Testing health endpoints =="
+            curl -f http://localhost:8080/health || echo "Streamer health check failed"
+            curl -f http://localhost:3001 || echo "Web app health check failed"
+
+            echo "== Checking logs for any errors =="
+            sudo docker-compose logs --tail=50
+
+            echo "== Deployment completed successfully =="
+          EOF
+
+      - name: Verify deployment
+        run: |
+          echo "Deployment completed. Services should be available at:"
+          echo "- Streamer API: http://${{ secrets.AZURE_VM_IP }}:8080"
+          echo "- Web App: http://${{ secrets.AZURE_VM_IP }}:3001"
