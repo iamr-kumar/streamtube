@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { google } from "googleapis";
-import { authOptions } from "../../auth/[...nextauth]/route";
 import {
   ApiErrorResult,
   CreateBroadcastRequest,
   StreamInfo,
   PrivacyStatus,
 } from "@/types/streaming";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(
   request: NextRequest

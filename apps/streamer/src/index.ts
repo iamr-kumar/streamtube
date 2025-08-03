@@ -52,20 +52,6 @@ app.get("/streams", (req, res) => {
 });
 
 wss.on("connection", (ws: WsWebSocket, request) => {
-  // const streamConfig: StreamConfig = {
-  //   rtmpUrl: "rtmp://example.com/live",
-  //   streamKey: "stream-key",
-  //   resolution: {
-  //     width: 1280,
-  //     height: 720,
-  //   },
-  //   frameRate: 30,
-  //   bitrate: 2500,
-  //   audioSampleRate: 44100,
-  //   audioChannels: 2,
-  // };
-  // const sessionId = streamManager.createSession(ws, streamConfig);
-  // streamManager.startStream(sessionId);
   ws.send(
     JSON.stringify({
       type: "connection",
