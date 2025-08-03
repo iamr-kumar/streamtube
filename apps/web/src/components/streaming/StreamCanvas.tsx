@@ -26,6 +26,74 @@ export default function StreamCanvas({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Create a persistent audio context and mixer for dynamic audio management
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const mixerNodeRef = useRef<GainNode | null>(null);
+  const audioSourcesRef = useRef<MediaStreamAudioSourceNode[]>([]);
+  const mixedAudioStreamRef = useRef<MediaStream | null>(null);
+
+  // Initialize persistent audio mixing setup
+  useEffect(() => {
+    if (typeof window !== "undefined" && !audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+        // Create a gain node for mixing
+        mixerNodeRef.current = audioContextRef.current.createGain();
+        mixerNodeRef.current.gain.value = 1.0;
+
+        // Create a media stream destination
+        const destination = audioContextRef.current.createMediaStreamDestination();
+        mixerNodeRef.current.connect(destination);
+
+        mixedAudioStreamRef.current = destination.stream;
+      } catch (error) {
+        console.error("Failed to create audio context:", error);
+      }
+    }
+
+    return () => {
+      // Cleanup audio context on unmount
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
+
+  // Function to update audio mixing
+  const updateAudioMixing = useCallback(() => {
+    if (!audioContextRef.current || !mixerNodeRef.current) return;
+
+    // Disconnect all existing sources
+    audioSourcesRef.current.forEach((source) => {
+      try {
+        source.disconnect();
+      } catch (e) {
+        // Source may already be disconnected
+      }
+    });
+    audioSourcesRef.current = [];
+
+    // Connect current audio streams
+    const currentAudioStreams = [
+      ...(micEnabled && micStream ? [micStream] : []),
+      ...(screenEnabled && screenStream ? [screenStream] : []),
+    ];
+
+    currentAudioStreams.forEach((stream) => {
+      try {
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          const source = audioContextRef.current!.createMediaStreamSource(stream);
+          source.connect(mixerNodeRef.current!);
+          audioSourcesRef.current.push(source);
+        }
+      } catch (error) {
+        console.error("Error connecting audio source:", error);
+      }
+    });
+  }, [micEnabled, micStream, screenEnabled, screenStream]);
+
   // Initialize camera stream
   useEffect(() => {
     if (cameraEnabled) {
@@ -103,6 +171,13 @@ export default function StreamCanvas({
       }
     }
   }, [micEnabled]);
+
+  // Update audio mixing when audio streams change
+  useEffect(() => {
+    if (isStreaming) {
+      updateAudioMixing();
+    }
+  }, [micStream, screenStream, micEnabled, screenEnabled, updateAudioMixing, isStreaming]);
 
   // Canvas drawing function
   const drawToCanvas = useCallback(() => {
@@ -247,99 +322,136 @@ export default function StreamCanvas({
     };
   }, [drawToCanvas, cameraStream, screenStream]);
 
-  // MediaRecorder setup and management
+  // MediaRecorder setup - ONLY create once when streaming starts, never recreate
   useEffect(() => {
+    console.log("MediaRecorder effect triggered:", {
+      isStreaming,
+      hasCanvas: !!canvasRef.current,
+      hasRecorder: !!recorderRef.current,
+    });
+
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Stop existing recorder
-    if (recorderRef.current && recorderRef.current.state !== "inactive") {
-      recorderRef.current.stop();
-    }
-
-    if (!isStreaming) {
+    if (!canvas) {
+      console.log("No canvas available");
       return;
     }
 
-    const setupRecorder = async () => {
-      try {
-        // Get video track from canvas
-        const videoTrack = canvas.captureStream(25).getVideoTracks()[0];
-        if (!videoTrack) {
-          console.error("Could not get video track from canvas");
-          return;
-        }
+    if (isStreaming && !recorderRef.current) {
+      console.log("Starting MediaRecorder setup...");
 
-        // Collect all available audio tracks
-        const audioTracks = [
-          ...(micStream?.getAudioTracks() || []),
-          ...(screenStream?.getAudioTracks() || []),
-        ];
+      const setupRecorder = async () => {
+        try {
+          console.log("Setting up MediaRecorder...");
 
-        // Create a new stream for the recorder
-        const finalStream = new MediaStream([videoTrack, ...audioTracks]);
+          // Get video track from canvas
+          const canvasStream = canvas.captureStream(25);
+          console.log("Canvas stream:", canvasStream);
+          const videoTrack = canvasStream.getVideoTracks()[0];
+          if (!videoTrack) {
+            console.error("Could not get video track from canvas");
+            return;
+          }
+          console.log("Video track obtained:", videoTrack);
 
-        // Use better codec options
-        const mimeType = (() => {
-          if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")) {
-            return "video/webm;codecs=vp8,opus";
-          } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
-            return "video/webm;codecs=vp8";
-          } else if (MediaRecorder.isTypeSupported("video/webm")) {
-            return "video/webm";
+          // Get current audio tracks directly from streams (fallback approach)
+          const directAudioTracks = [
+            ...(micEnabled && micStream ? micStream.getAudioTracks() : []),
+            ...(screenEnabled && screenStream ? screenStream.getAudioTracks() : []),
+          ];
+
+          console.log("Direct audio tracks:", directAudioTracks.length);
+
+          // Try to use mixed audio first, fallback to direct tracks
+          let audioTracks = [];
+          if (mixedAudioStreamRef.current && audioContextRef.current?.state === "running") {
+            audioTracks = mixedAudioStreamRef.current.getAudioTracks();
+            console.log("Using mixed audio tracks:", audioTracks.length);
           } else {
-            return "";
+            audioTracks = directAudioTracks;
+            console.log("Using direct audio tracks:", audioTracks.length);
           }
-        })();
 
-        const recorder = new MediaRecorder(finalStream, {
-          mimeType,
-          videoBitsPerSecond: 2000000, // Reduced to 2 Mbps for better stability
-          audioBitsPerSecond: 128000, // 128 kbps
-        });
+          // Create the final stream
+          const finalStream = new MediaStream([videoTrack, ...audioTracks]);
+          console.log("Final stream tracks:", finalStream.getTracks().length);
 
-        // Accumulate chunks for more complete segments
-        let recordedChunks: Blob[] = [];
-        let chunkCount = 0;
+          // Use conservative codec settings
+          const mimeType = (() => {
+            if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")) {
+              return "video/webm;codecs=vp8,opus";
+            } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
+              return "video/webm;codecs=vp8";
+            } else if (MediaRecorder.isTypeSupported("video/webm")) {
+              return "video/webm";
+            } else {
+              return "";
+            }
+          })();
 
-        recorder.ondataavailable = (event) => {
-          if (event.data.size > 0 && isStreaming) {
-            onStreamData(event.data);
-          }
-        };
+          console.log("Using MIME type:", mimeType);
 
-        recorder.onerror = (event) => {
-          console.error("MediaRecorder error:", event);
-        };
+          const recorder = new MediaRecorder(finalStream, {
+            mimeType,
+            videoBitsPerSecond: 1500000, // 1.5 Mbps
+            audioBitsPerSecond: 128000, // 128 kbps
+          });
 
-        recorder.onstart = () => {
-          console.log("MediaRecorder started with codec:", mimeType);
-        };
+          recorder.ondataavailable = (event) => {
+            console.log("Data available:", event.data.size, "bytes");
+            if (event.data.size > 0 && isStreaming) {
+              onStreamData(event.data);
+            }
+          };
 
-        recorder.onstop = () => {
-          // Send any remaining chunks
+          recorder.onerror = (event) => {
+            console.error("MediaRecorder error:", event);
+          };
 
-          console.log("MediaRecorder stopped");
-        };
+          recorder.onstart = () => {
+            console.log("MediaRecorder started with codec:", mimeType);
+          };
 
-        // Use longer intervals to reduce fragmentation
-        recorder.start(33); // 33ms chunks
-        recorderRef.current = recorder;
+          recorder.onstop = () => {
+            console.log("MediaRecorder stopped");
+          };
 
-        console.log("MediaRecorder started with codec:", mimeType);
-      } catch (error) {
-        console.error("MediaRecorder setup error:", error);
+          // Start recording with larger chunks for stability
+          recorder.start(100); // 100ms chunks
+          recorderRef.current = recorder;
+
+          console.log("MediaRecorder created and started successfully");
+        } catch (error) {
+          console.error("MediaRecorder setup error:", error);
+        }
+      };
+
+      // Add a small delay to ensure canvas is ready
+      setTimeout(() => {
+        console.log("Timeout triggered, calling setupRecorder");
+        setupRecorder();
+      }, 100);
+    } else {
+      console.log("Not setting up recorder:", {
+        isStreaming,
+        hasRecorder: !!recorderRef.current,
+      });
+    }
+
+    // Stop recorder when streaming stops
+    if (!isStreaming && recorderRef.current) {
+      console.log("Stopping MediaRecorder...");
+      if (recorderRef.current.state !== "inactive") {
+        recorderRef.current.stop();
       }
-    };
-
-    setupRecorder();
+      recorderRef.current = null;
+    }
 
     return () => {
-      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      if (!isStreaming && recorderRef.current && recorderRef.current.state !== "inactive") {
         recorderRef.current.stop();
       }
     };
-  }, [isStreaming, micStream, screenStream, onStreamData]);
+  }, [isStreaming, onStreamData, micEnabled, micStream, screenEnabled, screenStream]); // Added dependencies for fallback audio
 
   // Cleanup on unmount
   useEffect(() => {
@@ -351,6 +463,22 @@ export default function StreamCanvas({
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+
+      // Clean up audio context
+      audioSourcesRef.current.forEach((source) => {
+        try {
+          source.disconnect();
+        } catch (e) {
+          // Already disconnected
+        }
+      });
+
+      // Clean up all streams
+      [cameraStream, screenStream, micStream].forEach((stream) => {
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+      });
     };
   }, []);
 
