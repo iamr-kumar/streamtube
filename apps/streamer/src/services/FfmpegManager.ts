@@ -37,6 +37,8 @@ export class FfmpegManager {
     this.onStats = callbacks.onStats;
     this.onError = callbacks.onError;
     this.onEnd = callbacks.onEnd;
+
+    console.log(this.config);
   }
 
   /**

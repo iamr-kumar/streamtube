@@ -1,23 +1,37 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { useStream } from "@/hooks/useStream";
 import { StreamConfig, StreamInfo } from "@/types/streaming";
 
 interface StreamingOperationsConfig {
   streamInfo: StreamInfo | null;
-  onStreamStart?: () => void;
-  onStreamStop?: () => void;
-  onError?: (error: string) => void;
+  onStreamStarting: () => void;
+  onStreamStarted: () => void;
+  onStreamEnding: () => void;
+  onStreamEnded: () => void;
+  onError: (error: string) => void;
 }
 
 export const useStreamingOperations = ({
   streamInfo,
-  onStreamStart,
-  onStreamStop,
+  onStreamStarting,
+  onStreamStarted,
+  onStreamEnding,
+  onStreamEnded,
   onError,
 }: StreamingOperationsConfig) => {
   const [isStreaming, setIsStreaming] = useState(false);
-  const { configureStream, startStream, stopStream } = useStream();
+  const { configureStream, startStream, stopStream, connect, sendData } = useStream();
+
+  useEffect(() => {
+    const connectToWebSocket = () => {
+      connect().catch((error) => {
+        console.error("Error connecting to WebSocket:", error);
+      });
+    };
+
+    connectToWebSocket();
+  }, []);
 
   const waitForYouTubeStreamToBeReady = useCallback(async (): Promise<boolean> => {
     if (!streamInfo?.broadcast?.id) {
@@ -96,6 +110,7 @@ export const useStreamingOperations = ({
 
     try {
       // Configure the stream
+      onStreamStarting();
       const sessionId = await configureStream(streamConfig);
       console.log("Stream configured with session ID:", sessionId);
 
@@ -103,7 +118,6 @@ export const useStreamingOperations = ({
       await startStream();
       console.log("Stream started successfully");
       setIsStreaming(true);
-      onStreamStart?.();
 
       // Wait for YouTube stream to be ready
       const streamIsReady = await waitForYouTubeStreamToBeReady();
@@ -118,6 +132,7 @@ export const useStreamingOperations = ({
       if (!transitionSuccess) {
         throw new Error("Failed to transition broadcast to live.");
       }
+      onStreamStarted();
 
       console.log("Broadcast transitioned to live successfully");
     } catch (error) {
@@ -132,7 +147,7 @@ export const useStreamingOperations = ({
       }
 
       const errorMessage = error instanceof Error ? error.message : String(error);
-      onError?.(errorMessage);
+      onError(errorMessage);
       throw error;
     }
   }, [
@@ -142,27 +157,36 @@ export const useStreamingOperations = ({
     stopStream,
     waitForYouTubeStreamToBeReady,
     transitionBroadcastToLive,
-    onStreamStart,
+    onStreamStarting,
+    onStreamStarted,
     onError,
   ]);
 
   const handleStopStream = useCallback(async (): Promise<void> => {
     try {
+      onStreamEnding();
       await stopStream();
       setIsStreaming(false);
-      onStreamStop?.();
-      console.log("Stream stopped successfully");
+      onStreamEnded();
     } catch (error) {
       console.error("Error stopping stream:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      onError?.(errorMessage);
+      onError(errorMessage);
       throw error;
     }
-  }, [stopStream, onStreamStop, onError]);
+  }, [stopStream, onStreamEnding, onStreamEnded, onError]);
+
+  const sendDataOverWebSocket = useCallback(
+    (data: Blob) => {
+      sendData(data);
+    },
+    [sendData]
+  );
 
   return {
     isStreaming,
     handleStartStream,
     handleStopStream,
+    sendDataOverWebSocket,
   };
 };
