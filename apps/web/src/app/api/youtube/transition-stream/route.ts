@@ -34,6 +34,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Broadcast not found" }, { status: 404 });
     }
     const currentStatus = broadcastData.status?.lifeCycleStatus;
+    if (currentStatus === "live") {
+      return NextResponse.json(
+        { success: true, message: "Stream is already live" },
+        { status: 200 }
+      );
+    }
     let nextStatus = currentStatus === "testing" ? "live" : "testing";
     let result = await youtube.liveBroadcasts.transition({
       part: ["status"],

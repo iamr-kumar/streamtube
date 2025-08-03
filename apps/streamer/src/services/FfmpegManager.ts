@@ -81,6 +81,18 @@ export class FfmpegManager {
     }
 
     try {
+      // Add timing information for debugging
+      const now = Date.now();
+      if (this.lastStatsTime > 0) {
+        const timeSinceLastStats = now - this.lastStatsTime;
+        if (timeSinceLastStats > 5000) {
+          // If no stats for 5 seconds
+          console.warn(
+            `No FFmpeg stats received for ${timeSinceLastStats}ms - possible stream issue`
+          );
+        }
+      }
+
       // Just write directly like the working example
       this.process.stdin.write(data);
       return true;
@@ -157,24 +169,80 @@ export class FfmpegManager {
     const { rtmpUrl, streamKey, resolution, frameRate, bitrate, audioSampleRate, audioChannels } =
       this.config;
 
-    const gop = frameRate * 2;
-    const keyint_min = frameRate;
-
     return [
+      // Input settings with strict format handling
+      "-f",
+      "webm",
+      "-fflags",
+      "+discardcorrupt", // Discard corrupted packets instead of failing
       "-i",
       "-",
+
+      // Video encoding - optimized for performance and stability
       "-c:v",
       "libx264",
       "-preset",
-      "veryfast",
+      "ultrafast",
       "-tune",
       "zerolatency",
+      "-profile:v",
+      "baseline",
+      "-level",
+      "3.1",
+      "-pix_fmt",
+      "yuv420p",
+
+      // Video settings
+      "-r",
+      frameRate.toString(),
+      "-g",
+      (frameRate * 2).toString(), // GOP size
+      "-keyint_min",
+      frameRate.toString(),
+      "-sc_threshold",
+      "0",
+      "-force_key_frames",
+      `expr:gte(t,n_forced*2)`, // Force keyframes every 2 seconds
+
+      // Video bitrate control
+      "-b:v",
+      `${bitrate}k`,
+      "-maxrate",
+      `${Math.floor(bitrate * 1.2)}k`,
+      "-bufsize",
+      `${bitrate * 2}k`,
+
+      // Audio encoding with better error handling
       "-c:a",
       "aac",
       "-ar",
-      "44100",
+      audioSampleRate.toString(),
+      "-ac",
+      audioChannels.toString(),
+      "-b:a",
+      "128k",
+      "-af",
+      "aresample=async=1:min_hard_comp=0.100000:first_pts=0", // Fix audio sync
+
+      // Enhanced timestamp and error handling
+      "-avoid_negative_ts",
+      "make_zero",
+      "-fflags",
+      "+genpts+igndts", // Generate PTS and ignore DTS issues
+      "-max_interleave_delta",
+      "0",
+      "-vsync",
+      "cfr", // Constant frame rate
+      "-err_detect",
+      "ignore_err", // Ignore decoder errors and continue
+
+      // Output format
       "-f",
       "flv",
+      "-flvflags",
+      "no_duration_filesize",
+
+      // RTMP output
       `${rtmpUrl}/${streamKey}`,
     ];
   }
