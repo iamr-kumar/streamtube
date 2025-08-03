@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { RECORDING_CONFIG, SUPPORTED_MIME_TYPES, VIDEO_CONFIG } from "../lib/streamingConstants";
+import { RECORDING_CONFIG, SUPPORTED_MIME_TYPES, VIDEO_CONFIG } from "../lib/constants";
 
 interface MediaRecorderConfig {
   isStreaming: boolean;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAudioMixer, useCanvasRenderer, useMediaDevices, useMediaRecorder } from "../../hooks";
-import { VIDEO_CONFIG } from "../../lib/streamingConstants";
+import { VIDEO_CONFIG } from "../../lib/constants";
 
 interface StreamCanvasProps {
   isStreaming: boolean;

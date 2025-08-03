@@ -22,22 +22,15 @@ export const useMediaControls = (initialState: Partial<MediaControlsState> = {})
   };
 
   return {
-    // State
     cameraEnabled,
     micEnabled,
     screenEnabled,
-
-    // Individual setters
     setCameraEnabled,
     setMicEnabled,
     setScreenEnabled,
-
-    // Toggle functions
     toggleCamera,
     toggleMic,
     toggleScreen,
-
-    // Utility
     resetControls,
   };
 };

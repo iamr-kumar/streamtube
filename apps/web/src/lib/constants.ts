@@ -19,7 +19,7 @@ export const VIDEO_CONFIG = {
 
 // Recording configuration constants
 export const RECORDING_CONFIG = {
-  VIDEO_BITRATE: 1500000, // 1.5 Mbps
+  VIDEO_BITRATE: 2500000, // 2.5 Mbps
   AUDIO_BITRATE: 128000, // 128 kbps
   CHUNK_SIZE: 100, // milliseconds
 } as const;

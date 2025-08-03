@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { VIDEO_CONFIG } from "../lib/streamingConstants";
+import { VIDEO_CONFIG } from "../lib/constants";
 
 interface MediaConfig {
   cameraEnabled: boolean;
@@ -20,7 +20,6 @@ export const useMediaDevices = ({ cameraEnabled, screenEnabled, micEnabled }: Me
     micStream: null,
   });
 
-  // Initialize camera stream
   useEffect(() => {
     if (cameraEnabled) {
       navigator.mediaDevices
@@ -47,7 +46,6 @@ export const useMediaDevices = ({ cameraEnabled, screenEnabled, micEnabled }: Me
     }
   }, [cameraEnabled]);
 
-  // Initialize screen share
   useEffect(() => {
     if (screenEnabled) {
       navigator.mediaDevices
@@ -75,7 +73,6 @@ export const useMediaDevices = ({ cameraEnabled, screenEnabled, micEnabled }: Me
     }
   }, [screenEnabled]);
 
-  // Initialize microphone
   useEffect(() => {
     if (micEnabled) {
       navigator.mediaDevices
@@ -96,7 +93,6 @@ export const useMediaDevices = ({ cameraEnabled, screenEnabled, micEnabled }: Me
     }
   }, [micEnabled]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       Object.values(streams).forEach((stream) => {

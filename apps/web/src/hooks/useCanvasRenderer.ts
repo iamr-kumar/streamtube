@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from "react";
-import { VIDEO_CONFIG, CANVAS_CONFIG } from "../lib/streamingConstants";
+import { VIDEO_CONFIG, CANVAS_CONFIG } from "../lib/constants";
 
 interface CanvasRendererConfig {
   cameraEnabled: boolean;

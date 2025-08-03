@@ -11,6 +11,10 @@ enum OperationType {
   STOP = "stop",
 }
 
+/**
+ * Streaming client for managing WebSocket connections and stream operations.
+ * This class handles the connection lifecycle, stream configuration, and message handling.
+ */
 export class StreamingClient {
   private webSocket: WebSocket | null = null;
   private url: string;
@@ -39,6 +43,7 @@ export class StreamingClient {
         this.webSocket.onopen = () => {
           this.status = StreamStatus.CONNECTED;
           this.callbacks.onConnected?.();
+          console.log("CONNECTED!");
           resolve();
         };
 

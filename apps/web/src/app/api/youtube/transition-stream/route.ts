@@ -48,11 +48,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     const newStatus = result.data.status?.lifeCycleStatus;
+    console.log(newStatus);
     if (!newStatus) {
       throw new Error(`Failed to transition broadcast ${broadcastId} to status ${nextStatus}`);
     }
     console.log(`Broadcast ${broadcastId} transitioned to ${newStatus}`);
     // set timeout for 10 seconds and wait
+    // this is a poor way to do it but it works for now
+    // ideally we should be polling the broadcast status and check
+    // if it has successfully transitioned to testing
+    // however, the API seems to be returning incorrect data
     await new Promise((resolve) => setTimeout(resolve, 10000));
 
     if (nextStatus !== "live") {
