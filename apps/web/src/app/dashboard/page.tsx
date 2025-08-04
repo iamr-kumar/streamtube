@@ -140,7 +140,7 @@ export default function StudioDashboard() {
                 <div className="p-2 bg-gradient-to-r from-red-500 to-purple-600 rounded-lg">
                   <Youtube className="h-6 w-6 text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-white">StreamTube Dashboard</h1>
+                <h1 className="text-xl font-bold text-white">StreamTube</h1>
               </div>
 
               <div className="flex items-center space-x-4">
@@ -148,15 +148,7 @@ export default function StudioDashboard() {
                   <User className="h-4 w-4" />
                   {/* <span className="text-sm">{session?.user?.name}</span> */}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push("/studio")}
-                  className="text-gray-300 hover:text-white hover:bg-white/10"
-                >
-                  <Monitor className="h-4 w-4 mr-2" />
-                  Studio
-                </Button>
+
                 <Button
                   variant="ghost"
                   size="sm"

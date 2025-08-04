@@ -1,39 +1,47 @@
 "use client";
 
-import { useMediaControls, useStreamInfo, useStreamingOperations } from "@/hooks";
+import { useEffect, useRef, useState } from "react";
+import StreamCanvas from "./StreamCanvas";
+import { Button } from "../ui/button";
+import { useStream } from "@/hooks/useStream";
 import { Separator } from "@radix-ui/react-separator";
 import {
+  Youtube,
+  User,
   Home,
   LogOut,
+  Video,
+  VideoOff,
   Mic,
   MicOff,
   Monitor,
   MonitorOff,
-  Play,
   Square,
-  User,
-  Video,
-  VideoOff,
-  Youtube,
+  Play,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import router from "next/router";
-import { useState } from "react";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 import { StartStreamModal } from "./StartStreamModal";
-import StreamCanvas from "./StreamCanvas";
+import { StreamConfig, StreamInfo, StreamStatus } from "@/types/streaming";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export default function StreamingStudio() {
-  const { cameraEnabled, micEnabled, screenEnabled, toggleCamera, toggleScreen, toggleMic } =
-    useMediaControls({ cameraEnabled: true, micEnabled: false, screenEnabled: false });
-
-  const { streamInfo } = useStreamInfo();
+  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(true);
+  const [screenEnabled, setScreenEnabled] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamInfo, setStreamInfo] = useState<StreamInfo | null>(null);
+  const { status, connect, sendData, configureStream, disconnect, startStream, stopStream } =
+    useStream();
 
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalSuccess, setModalSuccess] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   const openModal = () => {
     setShowModal(true);
@@ -49,28 +57,156 @@ export default function StreamingStudio() {
     setModalError(null);
   };
 
-  const { isStreaming, handleStartStream, handleStopStream, sendDataOverWebSocket } =
-    useStreamingOperations({
-      streamInfo,
-      onStreamStarting: () => {
-        openModal();
-        setModalLoading(true);
-        setModalSuccess(false);
-        setModalError(null);
-      },
-      onStreamStarted: () => {
-        setModalLoading(false);
-        setModalSuccess(true);
-        setModalError(null);
-      },
-      onStreamEnding: () => null,
-      onStreamEnded: () => null,
-      onError: (error: string) => {
-        setModalLoading(false);
-        setModalSuccess(false);
-        setModalError(error);
-      },
-    });
+  useEffect(() => {
+    const connectToWebSocket = () => {
+      connect().catch((error) => {
+        console.error("Error connecting to WebSocket:", error);
+      });
+    };
+
+    connectToWebSocket();
+  }, []);
+
+  useEffect(() => {
+    const activeStream = localStorage.getItem("activeStream");
+    if (activeStream) {
+      const streamData: StreamInfo = JSON.parse(activeStream);
+      setStreamInfo(streamData);
+    }
+  }, []);
+
+  const sendDataOverWebSocket = (data: Blob) => {
+    sendData(data);
+  };
+
+  const handleStartStream = async () => {
+    if (!streamInfo) {
+      console.error("No active stream found");
+      return;
+    }
+
+    const streamConfig: StreamConfig = {
+      rtmpUrl: streamInfo.stream.rtmpUrl,
+      streamKey: streamInfo.stream.streamKey,
+      resolution: { width: 1280, height: 720 },
+      frameRate: 25,
+      bitrate: 2500,
+      audioSampleRate: 44100,
+      audioChannels: 2,
+    };
+    openModal();
+    setModalLoading(true);
+    try {
+      // Configure the stream
+      const sessionId = await configureStream(streamConfig);
+      console.log("Stream configured with session ID:", sessionId);
+
+      // Start the stream
+      await startStream();
+      console.log("Stream started successfully");
+      setIsStreaming(true);
+
+      // Start sending data and wait for YouTube stream to be ready
+      const streamIsReady = await waitForYouTubeStreamToBeReady();
+
+      if (!streamIsReady) {
+        throw new Error(
+          "YouTube stream is not ready. Please ensure your connection is stable and try again."
+        );
+      }
+
+      const transitionSuccess = await transitionBroadcastStatus("live");
+      if (!transitionSuccess) {
+        throw new Error("Failed to transition broadcast to live.");
+      }
+
+      console.log("Broadcast transitioned to live successfully");
+      setModalLoading(false);
+      setModalSuccess(true);
+    } catch (error) {
+      console.error("Error in stream start process:", error);
+
+      // Attempt to clean up on error
+      try {
+        await stopStream();
+      } catch (cleanupError) {
+        console.error("Error during cleanup:", cleanupError);
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setModalError(`Failed to start stream: ${errorMessage}`);
+      setModalLoading(false);
+    }
+  };
+
+  const waitForYouTubeStreamToBeReady = async (): Promise<boolean> => {
+    const maxWaitTime = 60000; // 60 seconds
+    const checkInterval = 3000; // 3 seconds
+    const maxAttempts = Math.ceil(maxWaitTime / checkInterval);
+
+    for (let attempt = 0; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await axios.get(
+          `/api/youtube/ready-check?broadcastId=${streamInfo?.broadcast.id}`
+        );
+        const { message, canGoLive, broadcastReady } = response.data;
+
+        console.log("YouTube stream readiness check:", message);
+
+        if (canGoLive) {
+          return true;
+        }
+
+        if (attempt < maxAttempts) {
+          console.log(`Waiting for YouTube stream to be ready... (${attempt + 1}/${maxAttempts})`);
+          await new Promise((resolve) => setTimeout(resolve, checkInterval));
+        }
+      } catch (error) {
+        console.error("Error checking YouTube stream readiness:", error);
+
+        // If attempts still remaining, wait and retry
+        if (attempt < maxAttempts && axios.isAxiosError(error)) {
+          console.log(`Retrying readiness check... (${attempt + 1}/${maxAttempts})`);
+          await new Promise((resolve) => setTimeout(resolve, checkInterval));
+          continue;
+        }
+
+        // Break if attempts exhausted or error is not recoverable
+        console.error("Failed to check YouTube stream readiness after multiple attempts.");
+        return false;
+      }
+    }
+    return false; // If we reach here, it means the stream is not ready
+  };
+
+  const transitionBroadcastStatus = async (status: "live" | "complete"): Promise<boolean> => {
+    try {
+      const response = await axios.post("/api/youtube/transition-stream", {
+        broadcastId: streamInfo?.broadcast.id,
+        status,
+      });
+      if (response.data.success) {
+        return true;
+      }
+    } catch (error) {
+      console.error("Error transitioning broadcast:", error);
+    }
+    return false;
+  };
+
+  const handleStopStream = async () => {
+    try {
+      await stopStream();
+      setIsStreaming(false);
+      // transition broadcast status to complete
+      await transitionBroadcastStatus("complete");
+      console.log("Stream stopped successfully");
+      localStorage.removeItem("activeStream");
+      router.replace("/dashboard");
+    } catch (error) {
+      console.error("Error stopping stream:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -152,7 +288,7 @@ export default function StreamingStudio() {
                 <Button
                   variant={cameraEnabled ? "default" : "secondary"}
                   size="lg"
-                  onClick={toggleCamera}
+                  onClick={() => setCameraEnabled(!cameraEnabled)}
                   className={`${
                     cameraEnabled
                       ? "bg-green-600 hover:bg-green-700"
@@ -170,7 +306,7 @@ export default function StreamingStudio() {
                 <Button
                   variant={micEnabled ? "default" : "secondary"}
                   size="lg"
-                  onClick={toggleMic}
+                  onClick={() => setMicEnabled(!micEnabled)}
                   className={`${
                     micEnabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 hover:bg-gray-700"
                   } text-white px-6 py-3 rounded-xl transition-all duration-300`}
@@ -186,7 +322,7 @@ export default function StreamingStudio() {
                 <Button
                   variant={screenEnabled ? "default" : "secondary"}
                   size="lg"
-                  onClick={toggleScreen}
+                  onClick={() => setScreenEnabled(!screenEnabled)}
                   className={`${
                     screenEnabled
                       ? "bg-green-600 hover:bg-green-700"

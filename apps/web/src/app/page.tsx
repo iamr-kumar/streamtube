@@ -39,8 +39,7 @@ export default function HomePage() {
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              Professional live streaming platform for YouTube creators. Camera, screen sharing, and
-              seamless RTMP streaming.
+              Professional live streaming platform for YouTube creators.
             </p>
 
             {!session ? (
@@ -63,13 +62,13 @@ export default function HomePage() {
                   Welcome back,{" "}
                   <span className="text-white font-semibold">{session.user?.name}</span>!
                 </p>
-                <Link href="/studio">
+                <Link href="/dashboard">
                   <Button
                     size="lg"
                     className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-green-500/25 transition-all duration-300"
                   >
                     <Video className="mr-2 h-5 w-5" />
-                    Go to Streaming Studio
+                    Go to Dashboard
                   </Button>
                 </Link>
               </div>
@@ -78,57 +77,18 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Features Section */}
+      {/* About Section */}
       <div className="py-24 bg-black/30 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Everything you need to go live
-            </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Professional streaming tools designed for content creators who demand quality and
-              reliability.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all duration-300">
-              <CardHeader>
-                <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg w-fit mb-4">
-                  <Video className="h-6 w-6 text-white" />
-                </div>
-                <CardTitle className="text-white">Multi-Source Streaming</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Seamlessly combine camera feed and screen sharing with intelligent layout
-                  composition.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all duration-300">
-              <CardHeader>
-                <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg w-fit mb-4">
-                  <Zap className="h-6 w-6 text-white" />
-                </div>
-                <CardTitle className="text-white">Real-Time Processing</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Low-latency RTMP conversion and streaming directly to your YouTube channel.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all duration-300">
-              <CardHeader>
-                <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg w-fit mb-4">
-                  <Shield className="h-6 w-6 text-white" />
-                </div>
-                <CardTitle className="text-white">Secure & Reliable</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Enterprise-grade security with Google OAuth and reliable streaming infrastructure.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+            One-Stop Solution for YouTube Live Streaming
+          </h2>
+          <p className="text-lg md:text-xl text-gray-300 leading-relaxed">
+            StreamTube is your complete platform for managing live streams on YouTube. From setting
+            up your stream to going live with professional quality, we provide everything you need
+            in one unified solution. Whether you're a content creator, educator, or business,
+            StreamTube simplifies the entire live streaming process.
+          </p>
         </div>
       </div>
     </div>

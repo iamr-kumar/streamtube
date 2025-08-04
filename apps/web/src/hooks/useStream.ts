@@ -24,6 +24,11 @@ export function useStream(url: string = "ws://localhost:8080") {
       setError(null);
       console.log("Stream configuration updated:", config);
     },
+    onStreamStopped: () => {
+      setStatus(StreamStatus.CONNECTED);
+      setSessionId(null);
+      console.log("Stream stopped");
+    },
     onDisconnected: () => {
       setStatus(StreamStatus.DISCONNECTED);
       console.log("WebSocket disconnected");

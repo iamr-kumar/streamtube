@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
-import { google } from "googleapis";
+import { google, youtube_v3 } from "googleapis";
 import { authOptions } from "@/lib/auth";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { broadcastId } = await request.json();
+    const { broadcastId, status } = await request.json();
 
     const oauth2Client = new google.auth.OAuth2();
     oauth2Client.setCredentials({
@@ -25,56 +25,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       auth: oauth2Client,
     });
 
-    const broadcast = await youtube.liveBroadcasts.list({
-      part: ["status"],
-      id: [broadcastId],
-    });
-    const broadcastData = broadcast.data.items?.[0];
-    if (!broadcastData) {
-      return NextResponse.json({ error: "Broadcast not found" }, { status: 404 });
-    }
-    const currentStatus = broadcastData.status?.lifeCycleStatus;
-    if (currentStatus === "live") {
+    let result;
+    if (status === "live") {
+      result = await handleTransitionToLive(broadcastId, youtube);
+    } else if (status === "complete") {
+      result = await handleTransitionToCompleted(broadcastId, youtube);
+    } else {
       return NextResponse.json(
-        { success: true, message: "Stream is already live" },
-        { status: 200 }
+        { success: false, message: `Invalid status: ${status}. Use 'live' or 'complete'` },
+        { status: 400 }
       );
     }
-    let nextStatus = currentStatus === "testing" ? "live" : "testing";
-    let result = await youtube.liveBroadcasts.transition({
-      part: ["status"],
-      broadcastStatus: nextStatus,
-      id: broadcastId,
-    });
 
-    const newStatus = result.data.status?.lifeCycleStatus;
-    console.log(newStatus);
-    if (!newStatus) {
-      throw new Error(`Failed to transition broadcast ${broadcastId} to status ${nextStatus}`);
-    }
-    console.log(`Broadcast ${broadcastId} transitioned to ${newStatus}`);
-    // set timeout for 10 seconds and wait
-    // this is a poor way to do it but it works for now
-    // ideally we should be polling the broadcast status and check
-    // if it has successfully transitioned to testing
-    // however, the API seems to be returning incorrect data
-    await new Promise((resolve) => setTimeout(resolve, 10000));
-
-    if (nextStatus !== "live") {
-      nextStatus = "live";
-      result = await youtube.liveBroadcasts.transition({
-        part: ["status"],
-        broadcastStatus: nextStatus,
-        id: broadcastId,
-      });
-    }
-
-    console.log("Transition successful:");
-
-    return NextResponse.json(
-      { success: true, message: "Stream transitioned to live" },
-      { status: 200 }
-    );
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error("Error transitioning stream:", error);
     return NextResponse.json(
@@ -83,3 +46,96 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 }
+
+const handleTransitionToLive = async (
+  broadcastId: string,
+  youtube: youtube_v3.Youtube
+): Promise<{ success: boolean; message: string }> => {
+  const broadcast = await youtube.liveBroadcasts.list({
+    part: ["status"],
+    id: [broadcastId],
+  });
+
+  const broadcastData = broadcast.data.items?.[0];
+  if (!broadcastData) {
+    throw new Error("Broadcast not found");
+  }
+
+  const currentStatus = broadcastData.status?.lifeCycleStatus;
+  if (currentStatus === "live") {
+    return { success: true, message: "Stream is already live" };
+  }
+
+  // First transition to testing if not already
+  let nextStatus = currentStatus === "testing" ? "live" : "testing";
+  let result = await youtube.liveBroadcasts.transition({
+    part: ["status"],
+    broadcastStatus: nextStatus,
+    id: broadcastId,
+  });
+
+  const newStatus = result.data.status?.lifeCycleStatus;
+  if (!newStatus) {
+    throw new Error(`Failed to transition broadcast ${broadcastId} to status ${nextStatus}`);
+  }
+
+  console.log(`Broadcast ${broadcastId} transitioned to ${newStatus}`);
+
+  // Wait for 10 seconds for the transition to complete
+  // This is a workaround for API inconsistencies
+  await new Promise((resolve) => setTimeout(resolve, 10000));
+
+  // If we're not live yet, transition to live
+  if (nextStatus !== "live") {
+    nextStatus = "live";
+    result = await youtube.liveBroadcasts.transition({
+      part: ["status"],
+      broadcastStatus: nextStatus,
+      id: broadcastId,
+    });
+  }
+
+  return { success: true, message: "Stream transitioned to live" };
+};
+
+const handleTransitionToCompleted = async (
+  broadcastId: string,
+  youtube: youtube_v3.Youtube
+): Promise<{ success: boolean; message: string }> => {
+  const broadcast = await youtube.liveBroadcasts.list({
+    part: ["status"],
+    id: [broadcastId],
+  });
+
+  const broadcastData = broadcast.data.items?.[0];
+  if (!broadcastData) {
+    throw new Error("Broadcast not found");
+  }
+
+  const currentStatus = broadcastData.status?.lifeCycleStatus;
+  if (currentStatus === "complete") {
+    return { success: true, message: "Stream is already completed" };
+  }
+
+  // Can only transition to complete from live status
+  if (currentStatus !== "live") {
+    throw new Error(
+      `Cannot transition to complete from ${currentStatus}. Stream must be live first.`
+    );
+  }
+
+  const result = await youtube.liveBroadcasts.transition({
+    part: ["status"],
+    broadcastStatus: "complete",
+    id: broadcastId,
+  });
+
+  const newStatus = result.data.status?.lifeCycleStatus;
+  if (!newStatus) {
+    throw new Error(`Failed to transition broadcast ${broadcastId} to complete`);
+  }
+
+  console.log(`Broadcast ${broadcastId} transitioned to ${newStatus}`);
+
+  return { success: true, message: "Stream transitioned to completed" };
+};
