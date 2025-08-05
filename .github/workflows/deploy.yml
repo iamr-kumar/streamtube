@@ -44,8 +44,7 @@ jobs:
             echo "== Checking out main branch =="
             git checkout main || { echo "Failed to checkout main"; exit 1; }
 
-            echo "== Adding github.com to known_hosts =="
-            ssh-keyscan github.com >> ~/.ssh/known_hosts
+            ssh -T git@github.com
 
             echo "== Pulling latest changes =="
             git pull --no-rebase || { echo "Git pull failed"; exit 1; }
