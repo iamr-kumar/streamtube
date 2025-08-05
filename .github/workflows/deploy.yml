@@ -39,10 +39,13 @@ jobs:
             git config --global --add safe.directory /home/${USER}/projects/streamtube
 
             echo "== Navigating to project =="
-            cd ~/projects/streamtube || { echo "Project folder missing! Creating..."; mkdir -p ~/projects && cd ~/projects && git clone https://github.com/iamr-kumar/streamtube.git && cd streamtube; }
+            cd ~/projects/streamtube || { echo "Project folder missing! Creating..."; mkdir -p ~/projects && cd ~/projects && git clone git@github.com:iamr-kumar/streamtube.git && cd streamtube; }
 
             echo "== Checking out main branch =="
             git checkout main || { echo "Failed to checkout main"; exit 1; }
+
+            echo "== Adding github.com to known_hosts =="
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
 
             echo "== Pulling latest changes =="
             git pull --no-rebase || { echo "Git pull failed"; exit 1; }
