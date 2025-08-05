@@ -38,12 +38,12 @@ export const StreamControlsPanel: React.FC<StreamControlsPanelProps> = ({
             {isStreaming ? (
               <>
                 <Square className="h-5 w-5 mr-2" />
-                Stop Stream
+                End Stream
               </>
             ) : (
               <>
                 <Play className="h-5 w-5 mr-2" />
-                Start Stream
+                Go Live
               </>
             )}
           </Button>

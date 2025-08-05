@@ -1,12 +1,44 @@
 import { StreamingClient } from "@/lib/StreamingClient";
 import { StreamConfig, StreamServerCallbacks, StreamStatus } from "@/types/streaming";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useStreamInfo } from "./useStreamInfo";
+import axios from "axios";
 
-export function useStream(url: string = "ws://localhost:8080") {
+interface StreamActions {
+  onStreamStarting: () => void;
+  onStreamStarted: () => void;
+  onStreamEnding: () => void;
+  onStreamEnded: () => void;
+  onStreamError: (error: string) => void;
+}
+
+export function useStream({
+  url = "ws://localhost:8080",
+  actions,
+}: {
+  url?: string;
+  actions: StreamActions;
+}) {
   const [status, setStatus] = useState<StreamStatus>(StreamStatus.DISCONNECTED);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const streamClientRef = useRef<StreamingClient | null>(null);
+  const { streamInfo, clearStreamInfo } = useStreamInfo();
+  const { onStreamStarting, onStreamStarted, onStreamEnding, onStreamEnded, onStreamError } =
+    actions;
+
+  useEffect(() => {
+    const connectToWebSocket = async () => {
+      try {
+        await connect();
+        console.log("WebSocket connected successfully");
+      } catch (error) {
+        console.error("Error connecting to WebSocket:", error);
+      }
+    };
+    streamClientRef.current = new StreamingClient(url, callbacks);
+    connectToWebSocket();
+  }, []);
 
   const callbacks: StreamServerCallbacks = {
     onConnected: () => {
@@ -39,10 +71,6 @@ export function useStream(url: string = "ws://localhost:8080") {
       console.error("WebSocket error:", error);
     },
   };
-
-  useEffect(() => {
-    streamClientRef.current = new StreamingClient(url, callbacks);
-  }, [url]);
 
   const connect = useCallback(async (): Promise<void> => {
     if (!streamClientRef.current) {
@@ -114,6 +142,132 @@ export function useStream(url: string = "ws://localhost:8080") {
     }
   }, []);
 
+  const handleStartStream = async () => {
+    if (!streamInfo) {
+      console.error("No active stream found");
+      return;
+    }
+    console.log(status);
+
+    const streamConfig: StreamConfig = {
+      rtmpUrl: streamInfo.stream.rtmpUrl,
+      streamKey: streamInfo.stream.streamKey,
+      resolution: { width: 1280, height: 720 },
+      frameRate: 25,
+      bitrate: 2500,
+      audioSampleRate: 44100,
+      audioChannels: 2,
+    };
+    onStreamStarting();
+    try {
+      // Configure the stream
+      const sessionId = await configureStream(streamConfig);
+      console.log("Stream configured with session ID:", sessionId);
+
+      // Start the stream
+      await startStream();
+      console.log("Stream started successfully");
+
+      // Start sending data and wait for YouTube stream to be ready
+      const streamIsReady = await waitForYouTubeStreamToBeReady();
+
+      if (!streamIsReady) {
+        throw new Error(
+          "YouTube stream is not ready. Please ensure your connection is stable and try again."
+        );
+      }
+
+      const transitionSuccess = await transitionBroadcastStatus("live");
+      if (!transitionSuccess) {
+        throw new Error("Failed to transition broadcast to live.");
+      }
+
+      console.log("Broadcast transitioned to live successfully");
+      onStreamStarted();
+    } catch (error) {
+      console.error("Error in stream start process:", error);
+
+      // Attempt to clean up on error
+      try {
+        await stopStream();
+      } catch (cleanupError) {
+        console.error("Error during cleanup:", cleanupError);
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      onStreamError(`Failed to start stream: ${errorMessage}`);
+    }
+  };
+
+  const waitForYouTubeStreamToBeReady = async (): Promise<boolean> => {
+    const maxWaitTime = 60000; // 60 seconds
+    const checkInterval = 3000; // 3 seconds
+    const maxAttempts = Math.ceil(maxWaitTime / checkInterval);
+
+    for (let attempt = 0; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await axios.get(
+          `/api/youtube/ready-check?broadcastId=${streamInfo?.broadcast.id}`
+        );
+        const { message, canGoLive, broadcastReady } = response.data;
+
+        console.log("YouTube stream readiness check:", message);
+
+        if (canGoLive) {
+          return true;
+        }
+
+        if (attempt < maxAttempts) {
+          console.log(`Waiting for YouTube stream to be ready... (${attempt + 1}/${maxAttempts})`);
+          await new Promise((resolve) => setTimeout(resolve, checkInterval));
+        }
+      } catch (error) {
+        console.error("Error checking YouTube stream readiness:", error);
+
+        // If attempts still remaining, wait and retry
+        if (attempt < maxAttempts && axios.isAxiosError(error)) {
+          console.log(`Retrying readiness check... (${attempt + 1}/${maxAttempts})`);
+          await new Promise((resolve) => setTimeout(resolve, checkInterval));
+          continue;
+        }
+
+        // Break if attempts exhausted or error is not recoverable
+        console.error("Failed to check YouTube stream readiness after multiple attempts.");
+        return false;
+      }
+    }
+    return false; // If we reach here, it means the stream is not ready
+  };
+
+  const transitionBroadcastStatus = async (status: "live" | "complete"): Promise<boolean> => {
+    try {
+      const response = await axios.post("/api/youtube/transition-stream", {
+        broadcastId: streamInfo?.broadcast.id,
+        status,
+      });
+      if (response.data.success) {
+        return true;
+      }
+    } catch (error) {
+      console.error("Error transitioning broadcast:", error);
+    }
+    return false;
+  };
+
+  const handleStopStream = async () => {
+    try {
+      onStreamEnding();
+      await stopStream();
+      // transition broadcast status to complete
+      await transitionBroadcastStatus("complete");
+      console.log("Stream stopped successfully");
+      localStorage.removeItem("activeStream");
+      onStreamEnded();
+    } catch (error) {
+      console.error("Error stopping stream:", error);
+    }
+  };
+
   return {
     status,
     sessionId,
@@ -124,5 +278,7 @@ export function useStream(url: string = "ws://localhost:8080") {
     stopStream,
     disconnect,
     sendData,
+    handleStartStream,
+    handleStopStream,
   };
 }

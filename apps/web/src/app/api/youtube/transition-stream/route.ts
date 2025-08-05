@@ -65,9 +65,11 @@ const handleTransitionToLive = async (
   if (currentStatus === "live") {
     return { success: true, message: "Stream is already live" };
   }
+  console.log(currentStatus);
 
   // First transition to testing if not already
-  let nextStatus = currentStatus === "testing" ? "live" : "testing";
+  let nextStatus =
+    currentStatus === "testing" || currentStatus === "testStarting" ? "live" : "testing";
   let result = await youtube.liveBroadcasts.transition({
     part: ["status"],
     broadcastStatus: nextStatus,
@@ -81,9 +83,9 @@ const handleTransitionToLive = async (
 
   console.log(`Broadcast ${broadcastId} transitioned to ${newStatus}`);
 
-  // Wait for 10 seconds for the transition to complete
+  // Wait for 15 seconds for the transition to complete
   // This is a workaround for API inconsistencies
-  await new Promise((resolve) => setTimeout(resolve, 10000));
+  await new Promise((resolve) => setTimeout(resolve, 15000));
 
   // If we're not live yet, transition to live
   if (nextStatus !== "live") {

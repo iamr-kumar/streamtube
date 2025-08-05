@@ -6,4 +6,3 @@ export { useStreamInfo } from "./useStreamInfo";
 export { useMediaControls } from "./useMediaControls";
 export { useModal } from "./useModal";
 export { useStreamingOperations } from "./useStreamingOperations";
-export { useWebSocketConnection } from "./useWebSocketConnection";
