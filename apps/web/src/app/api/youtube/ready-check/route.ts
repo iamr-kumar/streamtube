@@ -10,6 +10,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if there's a token refresh error
+    if ((session as any).error === "RefreshAccessTokenError") {
+      return NextResponse.json(
+        { error: "Authentication expired. Please sign in again." },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const broadcastId = searchParams.get("broadcastId");
 

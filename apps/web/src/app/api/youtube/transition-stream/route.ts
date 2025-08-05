@@ -13,6 +13,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Check if there's a token refresh error
+    if ((session as any).error === "RefreshAccessTokenError") {
+      return NextResponse.json(
+        { error: "Authentication expired. Please sign in again." },
+        { status: 401 }
+      );
+    }
+
     const { broadcastId, status } = await request.json();
 
     const oauth2Client = new google.auth.OAuth2();

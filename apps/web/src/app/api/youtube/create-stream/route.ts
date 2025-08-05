@@ -23,6 +23,14 @@ export async function POST(
       );
     }
 
+    // Check if there's a token refresh error
+    if ((session as any).error === "RefreshAccessTokenError") {
+      return NextResponse.json(
+        { error: "Authentication expired. Please sign in again." },
+        { status: 401 }
+      );
+    }
+
     // Parse the request body
     const body: CreateBroadcastRequest = await request.json();
     const { title, description, privacyStatus } = body;

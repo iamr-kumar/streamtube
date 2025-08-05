@@ -10,7 +10,9 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!session) {
+
+    // Redirect to sign-in if no session or if there's a token refresh error
+    if (!session || (session as any).error === "RefreshAccessTokenError") {
       router.push("/auth/signin");
     }
   }, [session, status, router]);
@@ -23,7 +25,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!session) {
+  if (!session || (session as any).error === "RefreshAccessTokenError") {
     return null;
   }
 
