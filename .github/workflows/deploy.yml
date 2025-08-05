@@ -44,8 +44,6 @@ jobs:
             echo "== Checking out main branch =="
             git checkout main || { echo "Failed to checkout main"; exit 1; }
 
-            ssh -T git@github.com
-
             echo "== Pulling latest changes =="
             git pull --no-rebase || { echo "Git pull failed"; exit 1; }
 
@@ -57,7 +55,7 @@ jobs:
             sudo docker images | grep "streamtube-" | awk '{print $3}' | xargs -r sudo docker rmi -f || true
 
             echo "== Building and starting services with Docker Compose =="
-            if ! sudo docker-compose --env-file .env up -d --build; then
+            if ! sudo docker-compose --env-file .env.production up -d --build; then
               echo "== Docker Compose logs: =="
               sudo docker-compose logs
               echo "== Container status: =="
