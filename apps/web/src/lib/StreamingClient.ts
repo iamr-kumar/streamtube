@@ -31,6 +31,9 @@ export class StreamingClient {
     this.callbacks = callbacks;
   }
 
+  /**
+   * Establishes WebSocket connection and sets up event handlers.
+   */
   public connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.webSocket) {
@@ -67,6 +70,9 @@ export class StreamingClient {
     });
   }
 
+  /**
+   * Closes WebSocket connection and resets client state.
+   */
   public disconnect(): void {
     if (this.webSocket) {
       this.webSocket.close();
@@ -78,6 +84,10 @@ export class StreamingClient {
     this.callbacks.onDisconnected?.();
   }
 
+  /**
+   * Configures stream parameters on the server and returns session ID.
+   * Must be called after connection and before starting stream.
+   */
   public configureStream(config: StreamConfig): Promise<string> {
     return new Promise((resolve, reject) => {
       if (!this.isConnected()) {
@@ -109,6 +119,9 @@ export class StreamingClient {
     });
   }
 
+  /**
+   * Starts the configured stream session for live broadcasting.
+   */
   public startStream(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.isConnected()) {
@@ -140,6 +153,9 @@ export class StreamingClient {
     });
   }
 
+  /**
+   * Stops the active stream session and cleans up resources.
+   */
   public stopStream(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.isConnected()) {
@@ -171,6 +187,9 @@ export class StreamingClient {
     });
   }
 
+  /**
+   * Sends binary stream data to the server via WebSocket.
+   */
   public sendData(data: Blob): void {
     if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) {
       console.error("WebSocket is not open. Cannot send data.");
@@ -183,6 +202,9 @@ export class StreamingClient {
     }
   }
 
+  /**
+   * Parses incoming WebSocket messages and routes to appropriate handlers.
+   */
   private handleMessage(data: string): void {
     try {
       const message: StreamMessage = JSON.parse(data);
@@ -209,6 +231,9 @@ export class StreamingClient {
     }
   }
 
+  /**
+   * Sends JSON message to server via WebSocket connection.
+   */
   private sendMessage(message: Omit<StreamMessage, "sessionId">): void {
     if (!this.isConnected()) {
       console.error("Cannot send message - not connected");
@@ -219,6 +244,9 @@ export class StreamingClient {
     this.webSocket?.send(JSON.stringify(message));
   }
 
+  /**
+   * Checks if WebSocket is connected and ready for communication.
+   */
   private isConnected(): boolean {
     return (
       this.webSocket !== null &&
@@ -227,6 +255,9 @@ export class StreamingClient {
     );
   }
 
+  /**
+   * Handles stream configuration response and updates client state.
+   */
   private handleStreamConfigResponse(message: StreamMessage): void {
     this.sessionId = message.sessionId || null;
     this.status = StreamStatus.CONFIGURED;
@@ -237,6 +268,9 @@ export class StreamingClient {
     this.callbacks.onConfigUpdate?.(this.sessionId || "", message.payload.config as StreamConfig);
   }
 
+  /**
+   * Handles stream start response and updates status to streaming.
+   */
   private handleStreamStartResponse(message: StreamMessage): void {
     this.status = StreamStatus.STREAMING;
 
@@ -246,6 +280,9 @@ export class StreamingClient {
     this.callbacks.onStreamStarted?.(this.sessionId || "");
   }
 
+  /**
+   * Handles stream stop response and resets streaming state.
+   */
   private handleStreamStopResponse(message: StreamMessage): void {
     this.status = StreamStatus.CONNECTED;
 
@@ -255,6 +292,9 @@ export class StreamingClient {
     this.callbacks.onStreamStopped?.(this.sessionId || "");
   }
 
+  /**
+   * Handles error messages from server and rejects pending operations.
+   */
   private handleStreamError(message: StreamMessage): void {
     this.status = StreamStatus.ERROR;
 
@@ -264,6 +304,9 @@ export class StreamingClient {
     this.callbacks.onError?.(message.payload.error as string);
   }
 
+  /**
+   * Resolves a pending operation and cleans up its timeout.
+   */
   private resolvePendingOperation(operationType: OperationType, result?: any): void {
     const operation = this.pendingOperations.get(operationType);
     if (operation) {
@@ -273,6 +316,9 @@ export class StreamingClient {
     }
   }
 
+  /**
+   * Rejects all pending operations with error and clears operation queue.
+   */
   private rejectAllPendingOperations(error: string): void {
     this.pendingOperations.forEach((operation) => {
       clearTimeout(operation.timeout);

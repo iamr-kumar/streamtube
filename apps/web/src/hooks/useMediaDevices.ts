@@ -13,6 +13,10 @@ interface MediaStreams {
   micStream: MediaStream | null;
 }
 
+/**
+ * Custom hook for managing media device access and stream lifecycle.
+ * Handles camera, screen sharing, and microphone stream acquisition and cleanup.
+ */
 export const useMediaDevices = ({ cameraEnabled, screenEnabled, micEnabled }: MediaConfig) => {
   const [streams, setStreams] = useState<MediaStreams>({
     cameraStream: null,

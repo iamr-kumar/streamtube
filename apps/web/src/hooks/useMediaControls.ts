@@ -6,6 +6,10 @@ interface MediaControlsState {
   screenEnabled: boolean;
 }
 
+/**
+ * Custom hook for managing media control states (camera, microphone, screen sharing).
+ * Provides toggle functions and state management for streaming controls.
+ */
 export const useMediaControls = (initialState: Partial<MediaControlsState> = {}) => {
   const [cameraEnabled, setCameraEnabled] = useState(initialState.cameraEnabled ?? true);
   const [micEnabled, setMicEnabled] = useState(initialState.micEnabled ?? true);

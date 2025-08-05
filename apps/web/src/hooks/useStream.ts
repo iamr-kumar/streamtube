@@ -12,6 +12,10 @@ interface StreamActions {
   onStreamError: (error: string) => void;
 }
 
+/**
+ * Custom hook for managing streaming session lifecycle and YouTube integration.
+ * Handles WebSocket communication, stream configuration, and broadcast status transitions.
+ */
 export function useStream({
   url = "ws://localhost:8080",
   actions,
@@ -142,6 +146,9 @@ export function useStream({
     }
   }, []);
 
+  /**
+   * Initiates complete stream start process including YouTube broadcast setup.
+   */
   const handleStartStream = async () => {
     if (!streamInfo) {
       console.error("No active stream found");
@@ -199,6 +206,9 @@ export function useStream({
     }
   };
 
+  /**
+   * Polls YouTube API to verify stream readiness before going live.
+   */
   const waitForYouTubeStreamToBeReady = async (): Promise<boolean> => {
     const maxWaitTime = 60000; // 60 seconds
     const checkInterval = 3000; // 3 seconds
@@ -239,6 +249,9 @@ export function useStream({
     return false; // If we reach here, it means the stream is not ready
   };
 
+  /**
+   * Transitions YouTube broadcast status between live and complete states.
+   */
   const transitionBroadcastStatus = async (status: "live" | "complete"): Promise<boolean> => {
     try {
       const response = await axios.post("/api/youtube/transition-stream", {
@@ -254,6 +267,9 @@ export function useStream({
     return false;
   };
 
+  /**
+   * Stops active stream and transitions YouTube broadcast to complete status.
+   */
   const handleStopStream = async () => {
     try {
       onStreamEnding();

@@ -1,6 +1,14 @@
 import { StreamConfig } from "../types";
 
+/**
+ * ConfigValidator handles validation and sanitization of stream configuration parameters.
+ * It ensures all stream settings are within acceptable ranges and formats before processing.
+ */
 export class ConfigValidator {
+  /**
+   * Validates stream configuration parameters against acceptable limits and formats.
+   * Returns validation results with sanitized config if valid, or error list if invalid.
+   */
   public static validateConfig(config: Partial<StreamConfig>): {
     isValid: boolean;
     errors: string[];
@@ -72,6 +80,9 @@ export class ConfigValidator {
     return { isValid: true, errors: [], sanitizedConfig };
   }
 
+  /**
+   * Validates URL format using regex pattern for supported protocols.
+   */
   private static validUrl(url: string): boolean {
     const regex = /^(rtmp|rtmps|ftp|http|https):\/\/[^ "]+$/;
     return regex.test(url);

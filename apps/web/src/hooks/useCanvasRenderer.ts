@@ -8,6 +8,10 @@ interface CanvasRendererConfig {
   screenStream: MediaStream | null;
 }
 
+/**
+ * Custom hook for rendering video streams to HTML5 canvas with picture-in-picture support.
+ * Handles camera, screen sharing, and compositing for streaming output.
+ */
 export const useCanvasRenderer = ({
   cameraEnabled,
   screenEnabled,
@@ -34,7 +38,9 @@ export const useCanvasRenderer = ({
     }
   }, [screenStream]);
 
-  // Canvas drawing function
+  /**
+   * Renders video content to canvas with layout based on enabled media sources.
+   */
   const drawToCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;

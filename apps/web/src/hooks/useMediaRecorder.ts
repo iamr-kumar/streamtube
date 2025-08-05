@@ -13,6 +13,10 @@ interface MediaRecorderConfig {
   onStreamData: (data: Blob) => void;
 }
 
+/**
+ * Custom hook for managing MediaRecorder with canvas and audio stream integration.
+ * Combines video from canvas and mixed audio for streaming data generation.
+ */
 export const useMediaRecorder = ({
   isStreaming,
   canvasRef,
@@ -26,6 +30,9 @@ export const useMediaRecorder = ({
 }: MediaRecorderConfig) => {
   const recorderRef = useRef<MediaRecorder | null>(null);
 
+  /**
+   * Determines the best supported MIME type for MediaRecorder.
+   */
   const getSupportedMimeType = (): string => {
     for (const type of SUPPORTED_MIME_TYPES) {
       if (MediaRecorder.isTypeSupported(type)) {
@@ -35,6 +42,9 @@ export const useMediaRecorder = ({
     return "";
   };
 
+  /**
+   * Creates and configures MediaRecorder with canvas video and mixed audio streams.
+   */
   const createRecorder = async (): Promise<void> => {
     const canvas = canvasRef.current;
     if (!canvas) {
@@ -113,6 +123,9 @@ export const useMediaRecorder = ({
     }
   };
 
+  /**
+   * Stops active MediaRecorder and cleans up resources.
+   */
   const stopRecorder = (): void => {
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
       console.log("Stopping MediaRecorder...");

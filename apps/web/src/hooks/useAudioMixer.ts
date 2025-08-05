@@ -7,11 +7,9 @@ interface AudioMixerConfig {
   screenStream: MediaStream | null;
 }
 
-/** Since we need create and maintain a single instance of MediaStream
- * thoughout the streaming session, we use a custom hook to manage audio mixing.
- * This hook sets up an AudioContext, GainNode for volume control, and connects
- * the audio streams to the mixer. It also handles cleanup on unmount.
- * Individual audio sources (Media Stream) -> Mixer GainNode (Web Audio API) -> MediaStreamDestination (Convert back to Media Stream) -> Mixed MediaStream
+/**
+ * Custom hook for managing audio mixing using Web Audio API.
+ * Combines microphone and screen audio streams into a single mixed output.
  */
 export const useAudioMixer = ({
   micEnabled,
