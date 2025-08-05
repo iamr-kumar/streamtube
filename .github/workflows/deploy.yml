@@ -55,7 +55,7 @@ jobs:
             sudo docker images | grep "streamtube-" | awk '{print $3}' | xargs -r sudo docker rmi -f || true
 
             echo "== Building and starting services with Docker Compose =="
-            if ! sudo docker-compose up -d --build; then
+            if ! sudo docker-compose --env-file .env up -d --build; then
               echo "== Docker Compose logs: =="
               sudo docker-compose logs
               echo "== Container status: =="
