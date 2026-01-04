@@ -22,25 +22,22 @@ export const MediaControlsPanel: React.FC<MediaControlsPanelProps> = ({
   onToggleScreen,
   disabled = false,
 }) => {
-  const getButtonStyles = (isEnabled: boolean) => ({
-    className: `${
-      isEnabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 hover:bg-gray-700"
-    } text-white px-6 py-3 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`,
-  });
-
   return (
-    <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+    <Card className="shadow-[0_18px_50px_rgba(0,0,0,0.32)]">
       <CardHeader>
-        <CardTitle className="text-white">Media Controls</CardTitle>
+        <CardTitle className="text-[var(--text-primary)]">Media Controls</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-center space-x-4">
+        <div className="flex justify-center gap-3 flex-wrap">
           <Button
-            variant={cameraEnabled ? "default" : "secondary"}
             size="lg"
             onClick={onToggleCamera}
             disabled={disabled}
-            {...getButtonStyles(cameraEnabled)}
+            className={`px-5 ${
+              cameraEnabled
+                ? "bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white"
+                : "bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)]/80 text-[var(--text-primary)]"
+            }`}
           >
             {cameraEnabled ? (
               <Video className="h-5 w-5 mr-2" />
@@ -51,22 +48,28 @@ export const MediaControlsPanel: React.FC<MediaControlsPanelProps> = ({
           </Button>
 
           <Button
-            variant={micEnabled ? "default" : "secondary"}
             size="lg"
             onClick={onToggleMic}
             disabled={disabled}
-            {...getButtonStyles(micEnabled)}
+            className={`px-5 ${
+              micEnabled
+                ? "bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white"
+                : "bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)]/80 text-[var(--text-primary)]"
+            }`}
           >
             {micEnabled ? <Mic className="h-5 w-5 mr-2" /> : <MicOff className="h-5 w-5 mr-2" />}
             Microphone
           </Button>
 
           <Button
-            variant={screenEnabled ? "default" : "secondary"}
             size="lg"
             onClick={onToggleScreen}
             disabled={disabled}
-            {...getButtonStyles(screenEnabled)}
+            className={`px-5 ${
+              screenEnabled
+                ? "bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white"
+                : "bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)]/80 text-[var(--text-primary)]"
+            }`}
           >
             {screenEnabled ? (
               <Monitor className="h-5 w-5 mr-2" />

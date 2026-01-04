@@ -22,39 +22,40 @@ export default function SignInPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-surface-primary flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
         <Link
           href="/"
-          className="inline-flex items-center text-gray-300 hover:text-white mb-8 transition-colors"
+          className="inline-flex items-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to home
         </Link>
 
-        <Card className="bg-white/10 border-white/20 backdrop-blur-md shadow-2xl">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-gradient-to-r from-red-500 to-purple-600 rounded-xl">
-                <Youtube className="h-8 w-8 text-white" />
-              </div>
+        <Card className="shadow-[0_22px_60px_rgba(0,0,0,0.35)]">
+          <CardHeader className="text-center space-y-3">
+            <div className="mx-auto h-12 w-12 rounded-xl bg-[var(--accent-red)] flex items-center justify-center">
+              <Youtube className="h-6 w-6 text-white" />
             </div>
-            <CardTitle className="text-2xl text-white">Sign in to StreamTube</CardTitle>
-            <CardDescription className="text-gray-300">
+            <CardTitle className="text-2xl text-[var(--text-primary)]">
+              Sign in to Stream<span className="text-[var(--accent-red)]">Tube</span>
+            </CardTitle>
+            <CardDescription className="text-[var(--text-secondary)]">
               Connect your Google account to start streaming to YouTube
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             <Button
               onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-              className="w-full bg-white text-gray-900 hover:bg-gray-100 py-3 text-lg font-semibold rounded-lg transition-all duration-300"
+              className="w-full justify-center"
+              size="lg"
             >
               <Youtube className="mr-2 h-5 w-5" />
               Continue with Google
             </Button>
 
             <div className="text-center">
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-[var(--text-muted)]">
                 By signing in, you agree to our terms of service and privacy policy.
               </p>
             </div>

@@ -96,38 +96,29 @@ export default function StudioPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="min-h-screen bg-surface-primary">
         {/* Header */}
-        <header className="bg-black/30 backdrop-blur-sm border-b border-white/10">
+        <header className="bg-[var(--bg-primary)]/85 backdrop-blur-sm border-b border-[var(--border-soft)]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-4">
-                <div className="p-2 bg-gradient-to-r from-red-500 to-purple-600 rounded-lg">
-                  <Youtube className="h-6 w-6 text-white" />
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-[var(--accent-red)] text-white">
+                  <Youtube className="h-6 w-6" />
                 </div>
-                <h1 className="text-xl font-bold text-white">Streaming Studio</h1>
+                <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+                  Streaming <span className="text-[var(--accent-red)]">Studio</span>
+                </h1>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2 text-gray-300">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-[var(--text-muted)]">
                   <User className="h-4 w-4" />
-                  {/* <span className="text-sm">{session?.user?.name}</span> */}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push("/dashboard")}
-                  className="text-gray-300 hover:text-white hover:bg-white/10"
-                >
+                <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
                   <Home className="h-4 w-4 mr-2" />
                   Dashboard
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => signOut()}
-                  className="text-gray-300 hover:text-white hover:bg-white/10"
-                >
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>

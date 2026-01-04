@@ -60,7 +60,7 @@ export default function StreamCanvas({
         ref={canvasRef}
         width={VIDEO_CONFIG.CANVAS.WIDTH}
         height={VIDEO_CONFIG.CANVAS.HEIGHT}
-        className="w-full h-auto bg-gray-900 rounded-lg shadow-2xl"
+        className="w-full h-auto rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-soft)] shadow-[0_16px_40px_rgba(0,0,0,0.25)]"
       />
 
       {/* Hidden video elements for canvas composition */}

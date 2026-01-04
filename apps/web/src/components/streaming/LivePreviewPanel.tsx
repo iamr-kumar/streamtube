@@ -19,15 +19,15 @@ export const LivePreviewPanel: React.FC<LivePreviewPanelProps> = ({
   onStreamData,
 }) => {
   return (
-    <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+    <Card className="shadow-[0_18px_50px_rgba(0,0,0,0.32)]">
       <CardHeader>
-        <CardTitle className="text-white flex items-center space-x-2">
-          <Video className="h-5 w-5" />
+        <CardTitle className="text-[var(--text-primary)] flex items-center space-x-2">
+          <Video className="h-5 w-5 text-[var(--accent-red)]" />
           <span>Live Preview</span>
           {isStreaming && (
             <div className="flex items-center space-x-2 ml-auto">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-red-400 text-sm font-medium">LIVE</span>
+              <div className="w-3 h-3 bg-[var(--accent-red)] rounded-full animate-pulse" />
+              <span className="text-[var(--accent-red)] text-sm font-medium">LIVE</span>
             </div>
           )}
         </CardTitle>

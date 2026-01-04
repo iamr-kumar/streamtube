@@ -12,27 +12,19 @@ export const QuickActionsPanel: React.FC = () => {
   };
 
   return (
-    <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-white">Quick Actions</CardTitle>
+        <CardTitle className="text-[var(--text-primary)]">Quick Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <Button
-          variant="outline"
-          onClick={handleDashboardClick}
-          className="w-full border-white/10 hover:bg-white/10 text-white"
-        >
+        <Button variant="outline" onClick={handleDashboardClick} className="w-full">
           <Home className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
-        <Button
-          variant="outline"
-          className="w-full border-white/10 hover:bg-white/10 text-white"
-          disabled
-        >
+        <Button variant="outline" className="w-full" disabled>
           <Monitor className="h-4 w-4 mr-2" />
           Stream Settings
-          <span className="text-xs text-gray-400 ml-auto">(Soon)</span>
+          <span className="text-xs text-[var(--text-muted)] ml-auto">(Soon)</span>
         </Button>
       </CardContent>
     </Card>

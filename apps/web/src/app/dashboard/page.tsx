@@ -131,30 +131,26 @@ export default function StudioDashboard() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="min-h-screen bg-surface-primary">
         {/* Header */}
-        <header className="bg-black/30 backdrop-blur-sm border-b border-white/10">
+        <header className="bg-[var(--bg-primary)]/85 backdrop-blur-sm border-b border-[var(--border-soft)]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-4">
-                <div className="p-2 bg-gradient-to-r from-red-500 to-purple-600 rounded-lg">
-                  <Youtube className="h-6 w-6 text-white" />
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-[var(--accent-red)] text-white">
+                  <Youtube className="h-6 w-6" />
                 </div>
-                <h1 className="text-xl font-bold text-white">StreamTube</h1>
+                <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+                  Stream<span className="text-[var(--accent-red)]">Tube</span>
+                </h1>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2 text-gray-300">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-[var(--text-muted)]">
                   <User className="h-4 w-4" />
-                  {/* <span className="text-sm">{session?.user?.name}</span> */}
                 </div>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => signOut()}
-                  className="text-gray-300 hover:text-white hover:bg-white/10"
-                >
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>
@@ -165,29 +161,28 @@ export default function StudioDashboard() {
 
         <div className="max-w-4xl mx-auto p-6 space-y-6">
           {/* Welcome Section */}
-          <div className="text-center space-y-4">
-            <h2 className="text-3xl font-bold text-white">Welcome to Your Streaming Dashboard</h2>
-            <p className="text-gray-300 text-lg">
-              Create and manage your live streams with ease. Set up your stream details and go live
-              on YouTube.
+          <div className="text-center space-y-3">
+            <h2 className="text-3xl font-semibold text-[var(--text-primary)]">
+              Welcome to your streaming dashboard
+            </h2>
+            <p className="text-[var(--text-secondary)]/90 text-lg">
+              Prepare your broadcast with calm, layered controls before you go live.
             </p>
           </div>
 
           {/* Stream Creation Form */}
-          <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+          <Card className="shadow-[0_20px_60px_rgba(0,0,0,0.32)]">
             <CardHeader>
-              <CardTitle className="text-white flex items-center space-x-2">
-                <Settings className="h-5 w-5" />
-                <span>Create New Live Stream</span>
+              <CardTitle className="text-[var(--text-primary)] flex items-center space-x-2">
+                <Settings className="h-5 w-5 text-[var(--accent-red)]" />
+                <span>Create new live stream</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title" className="text-gray-300">
-                      Stream Title *
-                    </Label>
+                    <Label htmlFor="title">Stream Title *</Label>
                     <Input
                       id="title"
                       value={streamSettings.title}
@@ -198,14 +193,11 @@ export default function StudioDashboard() {
                         }))
                       }
                       placeholder="Enter your stream title..."
-                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description" className="text-gray-300">
-                      Description *
-                    </Label>
+                    <Label htmlFor="description">Description *</Label>
                     <textarea
                       id="description"
                       value={streamSettings.description}
@@ -217,122 +209,84 @@ export default function StudioDashboard() {
                       }
                       placeholder="Describe your stream content..."
                       rows={4}
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-md text-white placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-3 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-soft)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--accent-red)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-gray-300">Privacy Settings *</Label>
+                    <Label>Privacy Settings *</Label>
                     <div className="space-y-3">
-                      <div
-                        className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${
-                          streamSettings.privacyStatus === PrivacyStatus.PUBLIC
-                            ? "bg-purple-900/50 border-purple-500"
-                            : "bg-white/5 border-white/10 hover:bg-white/10"
-                        }`}
-                        onClick={() =>
-                          setStreamSettings((prev) => ({
-                            ...prev,
-                            privacyStatus: PrivacyStatus.PUBLIC,
-                          }))
-                        }
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                              streamSettings.privacyStatus === PrivacyStatus.PUBLIC
-                                ? "border-purple-500"
-                                : "border-white/30"
-                            }`}
-                          >
-                            {streamSettings.privacyStatus === PrivacyStatus.PUBLIC && (
-                              <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-sm text-white font-medium">Public</span>
-                            <p className="text-xs text-gray-400">Anyone can search and view</p>
-                          </div>
-                        </div>
-                      </div>
+                      {[PrivacyStatus.PUBLIC, PrivacyStatus.UNLISTED, PrivacyStatus.PRIVATE].map(
+                        (option) => {
+                          const isActive = streamSettings.privacyStatus === option;
+                          const labels = {
+                            [PrivacyStatus.PUBLIC]: {
+                              title: "Public",
+                              hint: "Anyone can search and view",
+                            },
+                            [PrivacyStatus.UNLISTED]: {
+                              title: "Unlisted",
+                              hint: "Only viewable with link",
+                            },
+                            [PrivacyStatus.PRIVATE]: {
+                              title: "Private",
+                              hint: "Only you can view",
+                            },
+                          }[option];
 
-                      <div
-                        className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${
-                          streamSettings.privacyStatus === PrivacyStatus.UNLISTED
-                            ? "bg-purple-900/50 border-purple-500"
-                            : "bg-white/5 border-white/10 hover:bg-white/10"
-                        }`}
-                        onClick={() =>
-                          setStreamSettings((prev) => ({
-                            ...prev,
-                            privacyStatus: PrivacyStatus.UNLISTED,
-                          }))
+                          return (
+                            <div
+                              key={option}
+                              className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${
+                                isActive
+                                  ? "border-[var(--accent-red)]/80 bg-[var(--accent-red-muted)]"
+                                  : "border-[var(--border-soft)] bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)]/80"
+                              }`}
+                              onClick={() =>
+                                setStreamSettings((prev) => ({
+                                  ...prev,
+                                  privacyStatus: option,
+                                }))
+                              }
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div
+                                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                                    isActive
+                                      ? "border-[var(--accent-red)]"
+                                      : "border-[var(--border-soft)]"
+                                  }`}
+                                >
+                                  {isActive && (
+                                    <div className="w-2 h-2 rounded-full bg-[var(--accent-red)]"></div>
+                                  )}
+                                </div>
+                                <div>
+                                  <span className="text-sm text-[var(--text-primary)] font-medium">
+                                    {labels.title}
+                                  </span>
+                                  <p className="text-xs text-[var(--text-muted)]">{labels.hint}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
                         }
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                              streamSettings.privacyStatus === PrivacyStatus.UNLISTED
-                                ? "border-purple-500"
-                                : "border-white/30"
-                            }`}
-                          >
-                            {streamSettings.privacyStatus === PrivacyStatus.UNLISTED && (
-                              <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-sm text-white font-medium">Unlisted</span>
-                            <p className="text-xs text-gray-400">Only viewable with link</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${
-                          streamSettings.privacyStatus === PrivacyStatus.PRIVATE
-                            ? "bg-purple-900/50 border-purple-500"
-                            : "bg-white/5 border-white/10 hover:bg-white/10"
-                        }`}
-                        onClick={() =>
-                          setStreamSettings((prev) => ({
-                            ...prev,
-                            privacyStatus: PrivacyStatus.PRIVATE,
-                          }))
-                        }
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                              streamSettings.privacyStatus === PrivacyStatus.PRIVATE
-                                ? "border-purple-500"
-                                : "border-white/30"
-                            }`}
-                          >
-                            {streamSettings.privacyStatus === PrivacyStatus.PRIVATE && (
-                              <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-sm text-white font-medium">Private</span>
-                            <p className="text-xs text-gray-400">Only you can view</p>
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <Separator className="bg-white/10" />
+              <Separator />
 
               <div className="flex justify-center">
                 <Button
                   onClick={createNewStream}
                   disabled={!streamSettings.title.trim() || !streamSettings.description.trim()}
-                  className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white px-8 py-3 text-lg font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  size="lg"
+                  className="px-8"
                 >
                   <Play className="h-5 w-5 mr-2" />
                   Create Live Stream
