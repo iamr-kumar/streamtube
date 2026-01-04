@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body className="antialiased bg-surface-primary text-text-secondary min-h-screen">
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>

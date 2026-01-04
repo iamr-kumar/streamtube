@@ -17,22 +17,23 @@ export const StreamControlsPanel: React.FC<StreamControlsPanelProps> = ({
   disabled = false,
 }) => {
   return (
-    <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-white">Stream Controls</CardTitle>
+        <CardTitle className="text-[var(--text-primary)]">Stream Controls</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-center space-y-4">
-          <div className="text-sm text-gray-400">
-            {isStreaming ? "Stream is live!" : "Ready to stream"}
+          <div className="text-sm text-[var(--text-muted)]">
+            {isStreaming ? "Stream is live" : "Ready to stream"}
           </div>
           <Button
             onClick={isStreaming ? onStopStream : onStartStream}
             disabled={disabled}
-            className={`w-full py-3 text-lg font-semibold rounded-xl transition-all duration-300 ${
+            size="lg"
+            className={`w-full py-3 text-lg font-semibold ${
               isStreaming
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)] border border-[var(--accent-red)] hover:bg-[var(--accent-red-muted)]"
+                : "bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white"
             }`}
           >
             {isStreaming ? (
@@ -48,7 +49,7 @@ export const StreamControlsPanel: React.FC<StreamControlsPanelProps> = ({
             )}
           </Button>
           {!isStreaming && (
-            <div className="text-xs text-gray-500 text-center">
+            <div className="text-xs text-[var(--text-muted)] text-center">
               Make sure to create a stream from the dashboard first
             </div>
           )}

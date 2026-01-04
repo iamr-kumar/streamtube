@@ -1,5 +1,5 @@
 import React from "react";
-import { Separator } from "@radix-ui/react-separator";
+import { Separator } from "../ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 interface StreamStatusPanelProps {
@@ -16,31 +16,39 @@ export const StreamStatusPanel: React.FC<StreamStatusPanelProps> = ({
   isStreaming,
 }) => {
   const StatusIndicator: React.FC<{ enabled: boolean }> = ({ enabled }) => (
-    <div className={`w-3 h-3 rounded-full ${enabled ? "bg-green-500" : "bg-gray-500"}`} />
+    <div
+      className={`w-3 h-3 rounded-full ${
+        enabled ? "bg-[var(--accent-red)]" : "bg-[var(--text-muted)]"
+      }`}
+    />
   );
 
   return (
-    <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-white">Stream Status</CardTitle>
+        <CardTitle className="text-[var(--text-primary)]">Stream Status</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-gray-300">Camera</span>
+          <span className="text-[var(--text-secondary)]">Camera</span>
           <StatusIndicator enabled={cameraEnabled} />
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-300">Microphone</span>
+          <span className="text-[var(--text-secondary)]">Microphone</span>
           <StatusIndicator enabled={micEnabled} />
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-300">Screen Share</span>
+          <span className="text-[var(--text-secondary)]">Screen Share</span>
           <StatusIndicator enabled={screenEnabled} />
         </div>
-        <Separator className="bg-white/10" />
+        <Separator />
         <div className="flex justify-between items-center">
-          <span className="text-gray-300">Stream Status</span>
-          <span className={`text-sm font-medium ${isStreaming ? "text-red-400" : "text-gray-400"}`}>
+          <span className="text-[var(--text-secondary)]">Stream Status</span>
+          <span
+            className={`text-sm font-semibold ${
+              isStreaming ? "text-[var(--accent-red)]" : "text-[var(--text-muted)]"
+            }`}
+          >
             {isStreaming ? "LIVE" : "OFFLINE"}
           </span>
         </div>

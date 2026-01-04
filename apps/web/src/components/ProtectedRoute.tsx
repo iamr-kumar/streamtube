@@ -19,8 +19,8 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="animate-pulse text-white">Loading...</div>
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="animate-pulse text-[var(--text-secondary)]">Loading...</div>
       </div>
     );
   }

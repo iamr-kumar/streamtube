@@ -56,7 +56,7 @@ export function Modal({
     <div
       className={cn(
         "fixed inset-0 z-50 flex items-center justify-center p-4",
-        "bg-black/60 backdrop-blur-sm",
+        "bg-[var(--bg-primary)]/85 backdrop-blur-sm",
         overlayClassName
       )}
       onClick={handleOverlayClick}
@@ -64,8 +64,8 @@ export function Modal({
       <div
         ref={modalRef}
         className={cn(
-          "relative w-full max-w-md rounded-lg bg-gray-900 shadow-2xl",
-          "border border-gray-700 backdrop-blur-md",
+          "relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] shadow-[0_18px_50px_rgba(0,0,0,0.35)]",
+          "border border-[var(--border-soft)] backdrop-blur-sm",
           "transform transition-all duration-200 ease-out",
           "max-h-[90vh] overflow-y-auto",
           className
@@ -94,13 +94,16 @@ export function ModalHeader({
 }: ModalHeaderProps) {
   return (
     <div
-      className={cn("flex items-center justify-between p-6 border-b border-gray-700", className)}
+      className={cn(
+        "flex items-center justify-between p-6 border-b border-[var(--border-soft)]",
+        className
+      )}
     >
-      <div className="text-lg font-semibold text-white">{children}</div>
+      <div className="text-lg font-semibold text-[var(--text-primary)]">{children}</div>
       {showCloseButton && onClose && (
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white transition-colors p-1 rounded-md hover:bg-gray-800"
+          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1 rounded-md hover:bg-[var(--bg-tertiary)]"
           aria-label="Close modal"
         >
           <X className="h-5 w-5" />
@@ -127,7 +130,10 @@ interface ModalFooterProps {
 export function ModalFooter({ children, className }: ModalFooterProps) {
   return (
     <div
-      className={cn("flex items-center justify-end gap-3 p-6 border-t border-gray-700", className)}
+      className={cn(
+        "flex items-center justify-end gap-3 p-6 border-t border-[var(--border-soft)]",
+        className
+      )}
     >
       {children}
     </div>
